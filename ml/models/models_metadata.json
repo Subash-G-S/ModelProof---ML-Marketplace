@@ -1,0 +1,67 @@
+[
+  {
+    "id": "agri-yield-xgboost",
+    "name": "AgriYield-XGBoost",
+    "version": "v1.2",
+    "framework": "XGBoost",
+    "type": "Regression",
+    "description": "High-precision crop yield forecasting model trained on multispectral climate indices, soil chemistry, and micro-irrigation logs.",
+    "use_case": "Precision agriculture, harvest yield prediction, parametric crop insurance underwriting",
+    "filename": "agri_yield_xgboost.joblib",
+    "filesize": 417182,
+    "hash": "0xc9a9cbb40be84464d74172c63d491137665f2351da7868b68f59e3e71d9d70d8",
+    "ipfs_cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    "license_price_eth": "0.05",
+    "metrics": {
+      "r2": 0.955,
+      "mae": 134.3,
+      "rmse": 170.8,
+      "dataset_size": "2,500 records",
+      "features_count": 5,
+      "training_time": "1.42s"
+    }
+  },
+  {
+    "id": "crop-classification-rf",
+    "name": "CropClassification-RandomForest",
+    "version": "v1.0",
+    "framework": "Random Forest",
+    "type": "Classification",
+    "description": "Multivariate agro-botanical classifier matching soil nutrient profiles (N-P-K), pH and annual precipitation to optimal crop cultivar strains.",
+    "use_case": "Smart soil suitability recommendation and automated farm planning",
+    "filename": "crop_classification_rf.joblib",
+    "filesize": 1531713,
+    "hash": "0x742f8a8e197c71469200b392c1f91fbe7cb924a218cf8ec3b28f9cf57d851e65",
+    "ipfs_cid": "bafybeihkovi6z7iig22p7lbdft56j4u4w5x34s244s4nflm26e5eef72wq",
+    "license_price_eth": "0.03",
+    "metrics": {
+      "accuracy": 97.2,
+      "f1_score": 0.972,
+      "classes": 5,
+      "dataset_size": "3,000 soil samples",
+      "features_count": 5,
+      "training_time": "0.85s"
+    }
+  },
+  {
+    "id": "resume-classifier",
+    "name": "ResumeClassifier",
+    "version": "v2.0",
+    "framework": "Scikit-Learn (TF-IDF + Logistic Regression)",
+    "type": "NLP Classification",
+    "description": "High-throughput semantic NLP parser categorizing professional curricula vitae and tech stack portfolios across 8 tech domain verticals.",
+    "use_case": "Automated applicant tracking systems (ATS), talent screening, technical talent matching",
+    "filename": "resume_classifier.joblib",
+    "filesize": 21308,
+    "hash": "0xbca930fe30cc5d7aa619c4314f8d5e8e32382ddaf835032eb564e1f69773369b",
+    "ipfs_cid": "bafybeif47a46k2evqffzftoexh2e3r75k2x4i4tve4aegj346p4rsmk5cq",
+    "license_price_eth": "0.04",
+    "metrics": {
+      "accuracy": 100.0,
+      "vocabulary_size": 1200,
+      "classes": 8,
+      "dataset_size": "480 profiles",
+      "training_time": "0.62s"
+    }
+  }
+]

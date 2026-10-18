@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   ModelProof — Design System Foundation
+   Dark-first AI/Web3 SaaS aesthetic
+   ========================================================================= */
+
+@theme {
+  --color-mp-bg: #0a0a0f;
+  --color-mp-surface: #12121a;
+  --color-mp-surface-2: #1a1a26;
+  --color-mp-border: #2a2a3a;
+  --color-mp-border-subtle: #1f1f2e;
+  --color-mp-text: #e4e4ed;
+  --color-mp-text-muted: #8b8b9e;
+  --color-mp-text-dim: #5a5a6e;
+  --color-mp-accent: #7c5cff;
+  --color-mp-accent-light: #9d82ff;
+  --color-mp-accent-glow: rgba(124, 92, 255, 0.15);
+  --color-mp-success: #34d399;
+  --color-mp-warning: #fbbf24;
+  --color-mp-danger: #f87171;
+  --color-mp-info: #60a5fa;
+
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+/* ---- Base ---- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-mp-bg);
+  color: var(--color-mp-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-mp-border);
+  border-radius: 3px;
+}
