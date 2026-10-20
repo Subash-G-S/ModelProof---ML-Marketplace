@@ -15,6 +15,7 @@ import {
   History,
   Layers,
   FileCode,
+  Lock,
 } from "lucide-react";
 import { TransactionModal, TxStep } from "../components/TransactionModal";
 
@@ -45,7 +46,12 @@ export const ModelDetails: React.FC = () => {
   }
 
   const isLicensed = address ? hasActiveLicense(model.modelId, address) : false;
-  const isCreator = address && model.creator.toLowerCase() === address.toLowerCase();
+  const isCreator = address
+    ? model.creator.toLowerCase() === address.toLowerCase() ||
+      Boolean(configuredAccounts.creator && configuredAccounts.creator.toLowerCase() === address.toLowerCase()) ||
+      role === "creator"
+    : role === "creator";
+  const canAccessWeights = isLicensed || isCreator || role === "admin";
 
   const handleCopyHash = () => {
     navigator.clipboard.writeText(model.modelHash);
@@ -147,7 +153,7 @@ export const ModelDetails: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white flex items-center gap-1.5">
               <KeyRound className="h-4 w-4 text-mp-accent" />
-              <span>SHA-256 Model Fingerprint (Blockchain Anchor)</span>
+              <span>SHA-256 Model Fingerprint (Public Blockchain Anchor)</span>
             </span>
             <button
               onClick={handleCopyHash}
@@ -160,21 +166,38 @@ export const ModelDetails: React.FC = () => {
           <div className="p-2.5 rounded-lg bg-mp-surface border border-mp-border text-xs font-mono text-mp-accent-light break-all select-all">
             {model.modelHash}
           </div>
+          <div className="text-[11px] text-mp-text-dim flex items-center gap-1.5">
+            <span>🛡️ Public commitment: One-way cryptographic anchor that proves authenticity and benchmark reproducibility without exposing model weights.</span>
+          </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-mp-border/50 text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-mp-text-dim">IPFS CID:</span>
-              <span className="font-mono text-mp-text truncate max-w-xs">{model.ipfsCid}</span>
+              <span className="text-mp-text-dim">IPFS Storage:</span>
+              {canAccessWeights ? (
+                <span className="font-mono text-mp-text truncate max-w-xs">{model.ipfsCid}</span>
+              ) : (
+                <span className="font-mono text-mp-text-muted flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                  <span>ipfs://Qm••••••••••••••••••••••••</span>
+                </span>
+              )}
             </div>
-            <a
-              href={`https://ipfs.io/ipfs/${model.ipfsCid}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-mp-accent-light hover:underline text-xs"
-            >
-              <span>Inspect IPFS Node</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            {canAccessWeights ? (
+              <a
+                href={`https://ipfs.io/ipfs/${model.ipfsCid}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-mp-accent-light hover:underline text-xs"
+              >
+                <span>Inspect IPFS Node</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-amber-400 text-[11px] bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                <Lock className="h-3 w-3" />
+                <span>Encrypted: 30-Day License Required</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -317,15 +340,26 @@ export const ModelDetails: React.FC = () => {
           </Link>
 
           {model.filename && (
-            <a
-              href={`http://localhost:8000/download-sample-model/${model.filename}`}
-              download
-              className="flex items-center gap-2 px-4 py-3 rounded-xl border border-mp-border hover:border-mp-border/80 bg-mp-bg hover:bg-mp-surface text-mp-text-muted hover:text-white text-xs font-medium transition-all"
-              title="Download sample joblib file for testing verification"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Download Test Artifact ({model.filename})</span>
-            </a>
+            canAccessWeights ? (
+              <a
+                href={`http://localhost:8000/download-sample-model/${model.filename}`}
+                download
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-all shadow-sm"
+                title="Download verified model weights (.joblib)"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Download Model Weights ({model.filename})</span>
+              </a>
+            ) : (
+              <button
+                onClick={handleBuyLicense}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-mp-border hover:border-amber-500/40 bg-mp-bg hover:bg-mp-surface text-mp-text-muted hover:text-amber-300 text-xs font-medium transition-all group"
+                title="Purchase a 30-day license to decrypt and download this model artifact"
+              >
+                <Lock className="h-3.5 w-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                <span>Model Weights Locked (License Required)</span>
+              </button>
+            )
           )}
         </div>
       </div>

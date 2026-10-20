@@ -11,6 +11,7 @@ import {
   XCircle,
   AlertCircle,
   ArrowRight,
+  Download,
 } from "lucide-react";
 
 export const BuyerDashboard: React.FC = () => {
@@ -51,6 +52,8 @@ export const BuyerDashboard: React.FC = () => {
               0,
               Math.ceil((lic.expiry - Date.now()) / (1000 * 60 * 60 * 24))
             );
+
+            const matchingModel = models.find((m) => m.modelId === lic.modelId);
 
             return (
               <div
@@ -122,6 +125,18 @@ export const BuyerDashboard: React.FC = () => {
                       Details
                     </Link>
                   </div>
+
+                  {matchingModel?.filename && status === "ACTIVE" && (
+                    <a
+                      href={`http://localhost:8000/download-sample-model/${matchingModel.filename}`}
+                      download
+                      className="w-full py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                      title="Download licensed model artifact (.joblib)"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Download Model Weights ({matchingModel.filename})</span>
+                    </a>
+                  )}
 
                   <a
                     href={`https://sepolia.etherscan.io/tx/${lic.transactionHash}`}

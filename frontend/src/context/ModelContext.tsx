@@ -9,6 +9,14 @@ import {
   isContractDeployed,
   isModelRegisteredOnChain,
 } from "../services/contractService";
+import {
+  fetchModelsFromDb,
+  saveModelToDb,
+  fetchLicensesFromDb,
+  savePurchaseToDb,
+  fetchActivitiesFromDb,
+  recordActivityInDb,
+} from "../services/apiService";
 import { Address, Hash } from "viem";
 
 interface ModelContextType {
@@ -180,6 +188,37 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ]);
   const [activities, setActivities] = useState<ActivityEvent[]>(INITIAL_ACTIVITIES);
 
+  // Load persistent records from FastAPI SQLite backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDatabaseData() {
+      try {
+        const [dbModels, dbLicenses, dbActivities] = await Promise.all([
+          fetchModelsFromDb(),
+          fetchLicensesFromDb(),
+          fetchActivitiesFromDb(),
+        ]);
+        if (isMounted) {
+          if (dbModels && dbModels.length > 0) {
+            setModels(dbModels);
+          }
+          if (dbLicenses && dbLicenses.length > 0) {
+            setLicenses(dbLicenses);
+          }
+          if (dbActivities && dbActivities.length > 0) {
+            setActivities(dbActivities);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load database records on mount:", e);
+      }
+    }
+    loadDatabaseData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const generateFallbackTxHash = () => {
     const chars = "0123456789abcdef";
     let hash = "0x";
@@ -223,8 +262,25 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       txHash = generateFallbackTxHash();
     }
 
-    const newId = models.length + 1;
-    const newModel: ModelRecord = {
+    // Persist model to FastAPI SQLite backend
+    const saved = await saveModelToDb({
+      creator: address || data.creator,
+      name: data.name,
+      description: data.description,
+      framework: data.framework,
+      version: data.version,
+      modelType: data.modelType,
+      modelHash: data.modelHash,
+      ipfsCid: data.ipfsCid,
+      licensePriceEth: data.licensePriceEth,
+      useCase: data.useCase,
+      metrics: data.metrics,
+      filename: data.filename,
+      filesize: data.filesize,
+    });
+
+    const newId = saved ? saved.modelId : models.length + 1;
+    const newModel: ModelRecord = saved || {
       ...data,
       creator: address || data.creator,
       modelId: newId,
@@ -236,19 +292,27 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setModels((prev) => [newModel, ...prev]);
 
-    setActivities((prev) => [
-      {
-        id: `tx-${Date.now()}`,
-        type: "ModelRegistered",
-        user: address || data.creator,
-        modelName: data.name,
-        modelId: newId,
-        timestamp: Date.now(),
-        txHash,
-        status: "Confirmed",
-      },
-      ...prev,
-    ]);
+    const act: ActivityEvent = {
+      id: `tx-${Date.now()}`,
+      type: "ModelRegistered",
+      user: address || data.creator,
+      modelName: data.name,
+      modelId: newId,
+      timestamp: Date.now(),
+      txHash,
+      status: "Confirmed",
+    };
+    setActivities((prev) => [act, ...prev]);
+    recordActivityInDb({
+      id: act.id,
+      type: act.type,
+      user: act.user,
+      modelName: data.name,
+      modelId: newId,
+      txHash,
+      status: "Confirmed",
+      timestamp: act.timestamp,
+    });
 
     return { success: true, txHash, modelId: newId };
   };
@@ -391,8 +455,20 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       txHash = generateFallbackTxHash();
     }
 
-    const newLicenseId = licenses.length + 1;
-    const newLicense: LicenseRecord = {
+    // Persist purchase to FastAPI SQLite database
+    const savedLicense = await savePurchaseToDb({
+      modelId,
+      modelName: model.name,
+      creator: creatorRecipient,
+      licensee: address,
+      priceEth: model.licensePriceEth,
+      transactionHash: txHash,
+      issuedAt: Date.now(),
+      expiry: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    });
+
+    const newLicenseId = savedLicense ? savedLicense.licenseId : licenses.length + 1;
+    const newLicense: LicenseRecord = savedLicense || {
       licenseId: newLicenseId,
       modelId,
       modelName: model.name,

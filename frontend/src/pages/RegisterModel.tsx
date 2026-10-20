@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useModels } from "../context/ModelContext";
 import { useWallet } from "../context/WalletContext";
-import { analyzeModelFile, computeClientSha256 } from "../services/apiService";
+import { analyzeModelFile, computeClientSha256, uploadModelArtifactToStorage } from "../services/apiService";
 import {
   UploadCloud,
   KeyRound,
@@ -46,13 +46,27 @@ export const RegisterModel: React.FC = () => {
     setAnalysisSummary("");
 
     try {
-      // Analyze artifact and compute real SHA-256
-      const analysis = await analyzeModelFile(file);
-      setModelHash(analysis.sha256_hash);
-      setAnalysisSummary(analysis.summary);
-
-      if (analysis.framework && analysis.framework !== "Unknown") {
-        setFramework(analysis.framework.includes("XGB") ? "XGBoost" : analysis.framework);
+      // 1. Upload to backend physical model storage and compute SHA-256 fingerprint
+      const uploadRes = await uploadModelArtifactToStorage(file, address || undefined);
+      if (uploadRes) {
+        setModelHash(uploadRes.sha256_hash);
+        setAnalysisSummary(
+          `Artifact stored in backend repository (${(uploadRes.filesize / 1024).toFixed(1)} KB). Cryptographic SHA-256 verified.`
+        );
+        if (uploadRes.framework && uploadRes.framework !== "Unknown" && uploadRes.framework !== "Binary Artifact") {
+          setFramework(uploadRes.framework.includes("XGB") ? "XGBoost" : uploadRes.framework);
+        }
+        if (uploadRes.model_type && uploadRes.model_type !== "Generic ML Artifact") {
+          setModelType(uploadRes.model_type);
+        }
+      } else {
+        // Fallback to analyzeModelFile
+        const analysis = await analyzeModelFile(file);
+        setModelHash(analysis.sha256_hash);
+        setAnalysisSummary(analysis.summary);
+        if (analysis.framework && analysis.framework !== "Unknown") {
+          setFramework(analysis.framework.includes("XGB") ? "XGBoost" : analysis.framework);
+        }
       }
     } catch (e) {
       // Fallback client hashing

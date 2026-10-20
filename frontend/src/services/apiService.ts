@@ -121,3 +121,282 @@ export async function compareModelsWithAI(models: Partial<ModelRecord>[]): Promi
     ranked_models: models,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Database API Methods (Models, Purchases/Licenses, Artifacts, Activities)
+// ---------------------------------------------------------------------------
+
+export async function fetchModelsFromDb(): Promise<ModelRecord[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/models`, { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      return data.map((m: any) => ({
+        modelId: m.model_id,
+        creator: m.creator,
+        name: m.name,
+        description: m.description,
+        framework: m.framework,
+        version: m.version,
+        modelType: m.model_type,
+        modelHash: m.model_hash,
+        ipfsCid: m.ipfs_cid,
+        licensePriceEth: m.license_price_eth,
+        createdAt: m.created_at,
+        active: m.active,
+        licenseCount: m.license_count,
+        versionHistory: m.version_history,
+        metrics: m.metrics,
+        useCase: m.use_case,
+        filename: m.filename,
+        filesize: m.filesize,
+      }));
+    }
+  } catch (e) {
+    console.warn("Could not fetch models from database, falling back to local state.");
+  }
+  return [];
+}
+
+export async function saveModelToDb(modelData: {
+  creator: string;
+  name: string;
+  description?: string;
+  framework: string;
+  version: string;
+  modelType: string;
+  modelHash: string;
+  ipfsCid: string;
+  licensePriceEth: string;
+  useCase?: string;
+  metrics?: Record<string, any>;
+  filename?: string;
+  filesize?: number;
+}): Promise<ModelRecord | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/models`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        creator: modelData.creator,
+        name: modelData.name,
+        description: modelData.description || "",
+        framework: modelData.framework,
+        version: modelData.version,
+        model_type: modelData.modelType,
+        model_hash: modelData.modelHash,
+        ipfs_cid: modelData.ipfsCid,
+        license_price_eth: modelData.licensePriceEth,
+        use_case: modelData.useCase || "",
+        metrics: modelData.metrics || {},
+        filename: modelData.filename,
+        filesize: modelData.filesize || 0,
+      }),
+    });
+    if (res.ok) {
+      const m = await res.json();
+      return {
+        modelId: m.model_id,
+        creator: m.creator,
+        name: m.name,
+        description: m.description,
+        framework: m.framework,
+        version: m.version,
+        modelType: m.model_type,
+        modelHash: m.model_hash,
+        ipfsCid: m.ipfs_cid,
+        licensePriceEth: m.license_price_eth,
+        createdAt: m.created_at,
+        active: m.active,
+        licenseCount: m.license_count,
+        versionHistory: m.version_history,
+        metrics: m.metrics,
+        useCase: m.use_case,
+        filename: m.filename,
+        filesize: m.filesize,
+      };
+    }
+  } catch (e) {
+    console.warn("Failed to persist model to backend database:", e);
+  }
+  return null;
+}
+
+export async function fetchLicensesFromDb(licensee?: string): Promise<any[]> {
+  try {
+    const url = licensee
+      ? `${BACKEND_URL}/api/licenses?licensee=${encodeURIComponent(licensee)}`
+      : `${BACKEND_URL}/api/licenses`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      return data.map((l: any) => ({
+        licenseId: l.license_id,
+        modelId: l.model_id,
+        modelName: l.model_name,
+        creator: l.creator,
+        licensee: l.licensee,
+        issuedAt: l.issued_at,
+        expiry: l.expiry,
+        active: l.active,
+        priceEth: l.price_eth,
+        transactionHash: l.transaction_hash,
+      }));
+    }
+  } catch (e) {
+    console.warn("Could not fetch licenses from database:", e);
+  }
+  return [];
+}
+
+export async function savePurchaseToDb(purchase: {
+  modelId: number;
+  modelName: string;
+  creator: string;
+  licensee: string;
+  priceEth: string;
+  transactionHash: string;
+  issuedAt?: number;
+  expiry?: number;
+}): Promise<any | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/licenses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model_id: purchase.modelId,
+        model_name: purchase.modelName,
+        creator: purchase.creator,
+        licensee: purchase.licensee,
+        price_eth: purchase.priceEth,
+        transaction_hash: purchase.transactionHash,
+        issued_at: purchase.issuedAt,
+        expiry: purchase.expiry,
+      }),
+    });
+    if (res.ok) {
+      const l = await res.json();
+      return {
+        licenseId: l.license_id,
+        modelId: l.model_id,
+        modelName: l.model_name,
+        creator: l.creator,
+        licensee: l.licensee,
+        issuedAt: l.issued_at,
+        expiry: l.expiry,
+        active: l.active,
+        priceEth: l.price_eth,
+        transactionHash: l.transaction_hash,
+      };
+    }
+  } catch (e) {
+    console.warn("Failed to persist purchase to backend database:", e);
+  }
+  return null;
+}
+
+export async function uploadModelArtifactToStorage(
+  file: File,
+  creatorAddress?: string
+): Promise<{
+  filename: string;
+  original_name: string;
+  filesize: number;
+  sha256_hash: string;
+  framework?: string;
+  model_type?: string;
+  storage_url: string;
+} | null> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (creatorAddress) {
+      formData.append("creator_address", creatorAddress);
+    }
+    const res = await fetch(`${BACKEND_URL}/api/models/upload-artifact`, {
+      method: "POST",
+      body: formData,
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn("Artifact upload to backend model storage failed:", e);
+  }
+  return null;
+}
+
+export async function fetchActivitiesFromDb(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/activities`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      return data.map((a: any) => ({
+        id: a.id,
+        type: a.type,
+        user: a.user,
+        modelName: a.model_name,
+        modelId: a.model_id,
+        amountEth: a.amount_eth,
+        timestamp: a.timestamp,
+        txHash: a.tx_hash,
+        status: a.status,
+      }));
+    }
+  } catch (e) {
+    console.warn("Could not fetch activities from database:", e);
+  }
+  return [];
+}
+
+export async function recordActivityInDb(act: {
+  id?: string;
+  type: string;
+  user: string;
+  modelName: string;
+  modelId: number;
+  amountEth?: string;
+  txHash: string;
+  status?: string;
+  timestamp?: number;
+}): Promise<void> {
+  try {
+    await fetch(`${BACKEND_URL}/api/activities`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: act.id,
+        type: act.type,
+        user: act.user,
+        model_name: act.modelName,
+        model_id: act.modelId,
+        amount_eth: act.amountEth,
+        tx_hash: act.txHash,
+        status: act.status || "Confirmed",
+        timestamp: act.timestamp,
+      }),
+    });
+  } catch (e) {
+    console.warn("Failed to record activity in database:", e);
+  }
+}
+
+export async function fetchMarketplaceStatsFromDb(): Promise<{
+  total_models: number;
+  total_licenses_sold: number;
+  total_volume_eth: number;
+  total_creators: number;
+  total_buyers: number;
+} | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/stats`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return null;
+}
+
