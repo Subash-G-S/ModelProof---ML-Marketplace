@@ -108,7 +108,7 @@ export const Home: React.FC = () => {
             </div>
             <h3 className="text-base font-bold text-white">Zero-Trust Verification</h3>
             <p className="text-xs text-mp-text-muted leading-relaxed">
-              Verify any downloaded model file client-side against the on-chain registry in seconds to prove it hasn't been poisoned or modified.
+              Verify any model artifact client-side against the on-chain registry in seconds to prove mathematical authenticity before licensing.
             </p>
           </div>
         </div>

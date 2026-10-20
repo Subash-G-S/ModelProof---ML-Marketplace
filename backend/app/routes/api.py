@@ -20,8 +20,10 @@ from app.db.schemas import (
     ActivityResponse,
     ArtifactUploadResponse,
     MarketplaceStats,
+    PredictionRequest,
+    PredictionResponse,
 )
-from app.services.ml_service import compute_stream_sha256, analyze_model_artifact
+from app.services.ml_service import compute_stream_sha256, analyze_model_artifact, execute_model_prediction
 
 router = APIRouter(prefix="/api", tags=["marketplace"])
 
@@ -433,6 +435,103 @@ def download_by_filename(filename: str):
     if not target:
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path=target, filename=filename, media_type="application/octet-stream")
+
+# ---------------------------------------------------------------------------
+# Hosted Model Inference Endpoint (Active License Gated)
+# ---------------------------------------------------------------------------
+
+@router.post("/models/{model_id}/predict", response_model=PredictionResponse)
+def predict_model_inference(
+    model_id: int,
+    payload: PredictionRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Executes live model inference strictly gated by active on-chain/DB 30-day license.
+    Once a 30-day license expires, access is automatically blocked with 403 Forbidden.
+    """
+    model = db.query(ModelDB).filter(ModelDB.model_id == model_id).first()
+    if not model or not model.filename:
+        raise HTTPException(status_code=404, detail="Model artifact not registered")
+
+    now_ms = int(time.time() * 1000)
+    user_address = payload.licensee.strip().lower()
+
+    # 1. Check if user is the model creator
+    is_creator = model.creator.lower() == user_address
+
+    # 2. Check for active unexpired license
+    license_record = (
+        db.query(LicenseDB)
+        .filter(
+            LicenseDB.model_id == model_id,
+            LicenseDB.licensee.ilike(user_address),
+            LicenseDB.active == True,
+            LicenseDB.expiry > now_ms,
+        )
+        .first()
+    )
+
+    if not is_creator and not license_record:
+        # Check if they previously had a license that has now expired
+        expired_lic = (
+            db.query(LicenseDB)
+            .filter(
+                LicenseDB.model_id == model_id,
+                LicenseDB.licensee.ilike(user_address),
+            )
+            .order_by(desc(LicenseDB.expiry))
+            .first()
+        )
+        if expired_lic:
+            expiry_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(expired_lic.expiry / 1000))
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access Denied: Your 30-day license for '{model.name}' expired on {expiry_str}. Please renew your license on ModelProof to query this model."
+            )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access Denied: Active 30-day license required to query '{model.name}'. Please purchase a license to unlock hosted inference."
+        )
+
+    # 3. Locate physical model artifact
+    file_path = None
+    if model.storage_path and os.path.exists(model.storage_path):
+        file_path = model.storage_path
+    else:
+        c1 = os.path.join(STORAGE_DIR, model.filename)
+        c2 = os.path.join(ML_MODELS_DIR, model.filename)
+        if os.path.exists(c1):
+            file_path = c1
+        elif os.path.exists(c2):
+            file_path = c2
+
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=500, detail="Physical model weights file missing from storage repository.")
+
+    # 4. Execute prediction
+    try:
+        result = execute_model_prediction(file_path, payload.inputs)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Inference execution failed: {str(e)}")
+
+    days_left = 999 if is_creator else max(0, int((license_record.expiry - now_ms) / (1000 * 60 * 60 * 24)))
+
+    return PredictionResponse(
+        success=True,
+        model_id=model.model_id,
+        model_name=model.name,
+        prediction=result["prediction"],
+        primary_result=result["primary_result"],
+        confidence_percentage=result.get("confidence_percentage"),
+        latency_ms=result["latency_ms"],
+        license_status={
+            "authorized": True,
+            "is_creator": is_creator,
+            "license_id": license_record.license_id if license_record else None,
+            "days_remaining": days_left,
+        }
+    )
 
 # ---------------------------------------------------------------------------
 # Activity & Marketplace Stats

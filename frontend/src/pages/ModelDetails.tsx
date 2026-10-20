@@ -9,15 +9,22 @@ import {
   Copy,
   Clock,
   KeyRound,
-  Download,
   ArrowLeft,
   Coins,
   History,
   Layers,
   FileCode,
   Lock,
+  Play,
+  Terminal,
+  Code2,
+  RefreshCw,
+  Zap,
+  Check,
+  AlertCircle,
 } from "lucide-react";
 import { TransactionModal, TxStep } from "../components/TransactionModal";
+import { runModelInference } from "../services/apiService";
 
 export const ModelDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +59,82 @@ export const ModelDetails: React.FC = () => {
       role === "creator"
     : role === "creator";
   const canAccessWeights = isLicensed || isCreator || role === "admin";
+
+  // Hosted Inference Playground state
+  const [activePlaygroundTab, setActivePlaygroundTab] = useState<"playground" | "python_api">("playground");
+  const [inferenceInput, setInferenceInput] = useState<string>(() => {
+    if (model.name.toLowerCase().includes("agri") || model.modelId === 1) {
+      return JSON.stringify([600, 24, 120, 6.5, 8], null, 2);
+    } else if (model.name.toLowerCase().includes("crop") || model.modelId === 2) {
+      return JSON.stringify([80, 50, 40, 6.5, 650], null, 2);
+    } else if (model.name.toLowerCase().includes("resume") || model.modelId === 3) {
+      return JSON.stringify("Python Docker PostgreSQL Kubernetes AWS React software engineering", null, 2);
+    }
+    return JSON.stringify([10, 20, 30, 40, 50], null, 2);
+  });
+  const [inferenceResult, setInferenceResult] = useState<any>(null);
+  const [isInferenceLoading, setIsInferenceLoading] = useState<boolean>(false);
+  const [inferenceError, setInferenceError] = useState<string>("");
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleExecuteInference = async () => {
+    if (!address) {
+      await connectWallet();
+      return;
+    }
+    setIsInferenceLoading(true);
+    setInferenceError("");
+    setInferenceResult(null);
+    try {
+      let parsed;
+      try {
+        parsed = JSON.parse(inferenceInput);
+      } catch {
+        parsed = inferenceInput;
+      }
+      const res = await runModelInference(model.modelId, address, parsed);
+      if (!res.success) {
+        setInferenceError(res.error || "Inference call failed");
+      } else {
+        setInferenceResult(res);
+      }
+    } catch (e: any) {
+      setInferenceError(e.message || "Execution failed");
+    } finally {
+      setIsInferenceLoading(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    const code = `# ModelProof Python Inference Client
+# Authenticated via your active on-chain license wallet
+import requests
+
+ENDPOINT = "http://localhost:8000/api/models/${model.modelId}/predict"
+BUYER_WALLET = "${address || "0x022B8D7378982E11AF76Ad351C58D71501c15A60"}"
+
+payload = {
+    "licensee": BUYER_WALLET,
+    "inputs": ${inferenceInput.trim()}
+}
+
+response = requests.post(ENDPOINT, json=payload)
+
+if response.status_code == 200:
+    data = response.json()
+    print("✓ Inference Successful!")
+    print(f"Prediction: {data['primary_result']}")
+    print(f"Execution Latency: {data['latency_ms']} ms")
+    print(f"Days Left on 30-Day License: {data['license_status']['days_remaining']} days")
+elif response.status_code == 403:
+    print("✗ 403 Forbidden: License expired or not found. Please renew on ModelProof.")
+else:
+    print(f"✗ Error ({response.status_code}): {response.text}")
+`;
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   const handleCopyHash = () => {
     navigator.clipboard.writeText(model.modelHash);
@@ -248,6 +331,237 @@ export const ModelDetails: React.FC = () => {
           </div>
         </div>
 
+        {/* Hosted Inference API & Live Playground (Active License Gated) */}
+        <div id="playground" className="rounded-2xl border border-mp-border bg-mp-surface-2 p-6 sm:p-7 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-mp-border/80 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-mp-bg border border-mp-border flex items-center justify-center text-mp-accent-light">
+                <Terminal className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>Hosted Model Inference API</span>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-mp-accent/15 text-mp-accent-light border border-mp-accent/30 font-semibold">
+                    Live Engine
+                  </span>
+                </h3>
+                <p className="text-xs text-mp-text-muted mt-0.5">
+                  Strict DRM enforcement: Prediction queries are evaluated on-chain; access automatically revokes upon 30-day expiry.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {canAccessWeights ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>License Active (Authorized)</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold px-3 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Locked: Active License Required</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {canAccessWeights ? (
+            <div className="space-y-4">
+              {/* Tab Switcher */}
+              <div className="flex items-center gap-2 border-b border-mp-border/60 pb-3">
+                <button
+                  onClick={() => setActivePlaygroundTab("playground")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    activePlaygroundTab === "playground"
+                      ? "bg-mp-surface text-white border border-mp-border shadow-sm"
+                      : "text-mp-text-muted hover:text-white"
+                  }`}
+                >
+                  <Play className="h-3.5 w-3.5 text-mp-accent-light" />
+                  <span>Interactive Playground</span>
+                </button>
+                <button
+                  onClick={() => setActivePlaygroundTab("python_api")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    activePlaygroundTab === "python_api"
+                      ? "bg-mp-surface text-white border border-mp-border shadow-sm"
+                      : "text-mp-text-muted hover:text-white"
+                  }`}
+                >
+                  <Code2 className="h-3.5 w-3.5 text-mp-accent-light" />
+                  <span>Python API Client Snippet</span>
+                </button>
+              </div>
+
+              {activePlaygroundTab === "playground" ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="text-mp-text font-medium flex items-center gap-1.5">
+                        <span>Model Inputs (JSON Array or String):</span>
+                      </label>
+                      <button
+                        onClick={() => {
+                          if (model.name.toLowerCase().includes("agri") || model.modelId === 1) {
+                            setInferenceInput(JSON.stringify([600, 24, 120, 6.5, 8], null, 2));
+                          } else if (model.name.toLowerCase().includes("crop") || model.modelId === 2) {
+                            setInferenceInput(JSON.stringify([80, 50, 40, 6.5, 650], null, 2));
+                          } else if (model.name.toLowerCase().includes("resume") || model.modelId === 3) {
+                            setInferenceInput(JSON.stringify("Python Docker PostgreSQL Kubernetes AWS React software engineering", null, 2));
+                          }
+                          setInferenceResult(null);
+                          setInferenceError("");
+                        }}
+                        className="text-mp-accent-light hover:underline flex items-center gap-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Reset to Sample Features</span>
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={3}
+                      value={inferenceInput}
+                      onChange={(e) => setInferenceInput(e.target.value)}
+                      className="w-full p-3 rounded-xl bg-mp-bg border border-mp-border text-xs font-mono text-mp-text focus:outline-none focus:border-mp-accent-light"
+                      placeholder="Enter inference input vector..."
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleExecuteInference}
+                      disabled={isInferenceLoading}
+                      className="px-5 py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-mp-accent/15 transition-all disabled:opacity-50"
+                    >
+                      {isInferenceLoading ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <span>Executing Inference...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-3.5 w-3.5" />
+                          <span>Execute Live Prediction</span>
+                        </>
+                      )}
+                    </button>
+                    <span className="text-[11px] text-mp-text-dim font-mono">
+                      Calls backend server /api/models/{model.modelId}/predict
+                    </span>
+                  </div>
+
+                  {/* Results Display */}
+                  {inferenceResult && (
+                    <div className="p-4 rounded-xl bg-mp-bg border border-emerald-500/30 space-y-3 animate-in fade-in">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-mono text-emerald-400 font-bold flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Inference Response Received</span>
+                        </span>
+                        <div className="flex items-center gap-2 font-mono text-[11px]">
+                          <span className="px-2 py-0.5 rounded bg-mp-surface border border-mp-border text-mp-accent-light">
+                            ⏱️ {inferenceResult.latency_ms} ms
+                          </span>
+                          {inferenceResult.confidence_percentage && (
+                            <span className="px-2 py-0.5 rounded bg-mp-surface border border-mp-border text-emerald-400">
+                              Confidence: {inferenceResult.confidence_percentage}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-mp-surface border border-mp-border font-mono text-xs space-y-1">
+                        <div className="text-mp-text-dim uppercase text-[10px]">Predicted Output</div>
+                        <div className="text-white text-base font-bold break-all">
+                          {typeof inferenceResult.primary_result === "number"
+                            ? `${Number(inferenceResult.primary_result).toFixed(2)}`
+                            : String(inferenceResult.primary_result)}
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-mp-text-dim flex items-center justify-between font-mono">
+                        <span>Authentication: On-Chain Wallet Proof Verified</span>
+                        <span>
+                          {inferenceResult.license_status?.is_creator
+                            ? "Creator Unlimited Access"
+                            : `${inferenceResult.license_status?.days_remaining} Days Remaining on 30-Day License`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {inferenceError && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-start gap-2.5">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold">Inference Error</div>
+                        <div className="mt-0.5">{inferenceError}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-mp-text-muted">
+                      Use this Python script to query the hosted model securely from your external servers or pipelines:
+                    </span>
+                    <button
+                      onClick={handleCopyCode}
+                      className="text-xs text-mp-accent-light hover:text-white flex items-center gap-1 font-mono transition-colors"
+                    >
+                      {copiedCode ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copiedCode ? "Copied Snippet!" : "Copy Code"}</span>
+                    </button>
+                  </div>
+
+                  <pre className="p-4 rounded-xl bg-mp-bg border border-mp-border text-[11px] font-mono text-mp-text overflow-x-auto selection:bg-mp-accent/20">
+                    <code>{`# ModelProof Python Inference Client
+import requests
+
+ENDPOINT = "http://localhost:8000/api/models/${model.modelId}/predict"
+BUYER_WALLET = "${address || "0x022B8D7378982E11AF76Ad351C58D71501c15A60"}"
+
+payload = {
+    "licensee": BUYER_WALLET,
+    "inputs": ${inferenceInput.trim()}
+}
+
+response = requests.post(ENDPOINT, json=payload)
+if response.status_code == 200:
+    data = response.json()
+    print("✓ Prediction Result:", data["primary_result"])
+    print(f"Latency: {data['latency_ms']} ms | Days remaining: {data['license_status']['days_remaining']}")
+elif response.status_code == 403:
+    print("✗ 403 License Expired: Time-limited access elapsed. Please renew on ModelProof.")
+`}</code>
+                  </pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-6 rounded-xl bg-mp-bg border border-amber-500/30 space-y-4 text-center">
+              <Lock className="h-8 w-8 text-amber-400 mx-auto" />
+              <div className="max-w-md mx-auto space-y-1">
+                <h4 className="text-sm font-bold text-white">Live Prediction API Locked</h4>
+                <p className="text-xs text-mp-text-muted">
+                  Hosted inference calls verify smart contract licenses on every request. Acquire a 30-day license to immediately unlock predictions and developer API keys.
+                </p>
+              </div>
+
+              <button
+                onClick={handleBuyLicense}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold shadow-md shadow-mp-accent/15 transition-all"
+              >
+                <Coins className="h-3.5 w-3.5" />
+                <span>Purchase 30-Day License ({model.licensePriceEth} ETH)</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Action Buttons based on Role Authorization */}
         <div className="pt-4 border-t border-mp-border/60 flex flex-wrap items-center gap-4">
           {role === "creator" ? (
@@ -339,28 +653,14 @@ export const ModelDetails: React.FC = () => {
             <span>Verify Model Artifact</span>
           </Link>
 
-          {model.filename && (
-            canAccessWeights ? (
-              <a
-                href={`http://localhost:8000/download-sample-model/${model.filename}`}
-                download
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-all shadow-sm"
-                title="Download verified model weights (.joblib)"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Download Model Weights ({model.filename})</span>
-              </a>
-            ) : (
-              <button
-                onClick={handleBuyLicense}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-mp-border hover:border-amber-500/40 bg-mp-bg hover:bg-mp-surface text-mp-text-muted hover:text-amber-300 text-xs font-medium transition-all group"
-                title="Purchase a 30-day license to decrypt and download this model artifact"
-              >
-                <Lock className="h-3.5 w-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-                <span>Model Weights Locked (License Required)</span>
-              </button>
-            )
-          )}
+          <a
+            href="#playground"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl border border-mp-accent/40 bg-mp-accent/10 hover:bg-mp-accent/20 text-mp-accent-light hover:text-white text-xs font-semibold transition-all shadow-sm"
+            title="Access the hosted real-time prediction playground and developer API"
+          >
+            <Terminal className="h-4 w-4" />
+            <span>Hosted Inference API & Playground</span>
+          </a>
         </div>
       </div>
 

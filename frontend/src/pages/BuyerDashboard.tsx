@@ -11,8 +11,8 @@ import {
   XCircle,
   AlertCircle,
   ArrowRight,
-  Download,
   KeyRound,
+  Terminal,
 } from "lucide-react";
 
 export const BuyerDashboard: React.FC = () => {
@@ -116,30 +116,29 @@ export const BuyerDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-mp-border space-y-2.5">
-                  {matchingModel?.filename && status === "ACTIVE" && (
-                    <a
-                      href={`http://localhost:8000/download-sample-model/${matchingModel.filename}`}
-                      download
+                <div className="pt-3 border-t border-mp-border space-y-2">
+                  {status === "ACTIVE" && (
+                    <Link
+                      to={`/model/${lic.modelId}#playground`}
                       className="w-full py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-mp-accent/15"
-                      title="Download licensed model artifact (.joblib)"
+                      title="Run model predictions via hosted API playground"
                     >
-                      <Download className="h-3.5 w-3.5" />
-                      <span>Download Model Weights ({matchingModel.filename})</span>
-                    </a>
+                      <Terminal className="h-3.5 w-3.5" />
+                      <span>Run Hosted Inference & API</span>
+                    </Link>
                   )}
 
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/verify?modelId=${lic.modelId}`}
-                      className="flex-1 py-2.5 rounded-xl bg-mp-surface-2 hover:bg-mp-surface-3 border border-mp-border text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      className="flex-1 py-2 rounded-xl bg-mp-surface-2 hover:bg-mp-surface-3 border border-mp-border text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <ShieldCheck className="h-3.5 w-3.5 text-mp-accent-light" />
-                      <span>Verify Weights</span>
+                      <span>Verify Fingerprint</span>
                     </Link>
                     <Link
                       to={`/model/${lic.modelId}`}
-                      className="px-3 py-2.5 rounded-xl border border-mp-border hover:border-mp-accent-light text-mp-text hover:text-white text-xs transition-colors"
+                      className="px-3 py-2 rounded-xl border border-mp-border hover:border-mp-accent-light text-mp-text hover:text-white text-xs transition-colors"
                       title="View Model Specifications"
                     >
                       Specs

@@ -159,3 +159,74 @@ def generate_comparative_recommendation(models: List[Dict[str, Any]]) -> Dict[st
         "recommendation_text": recommendation,
         "ranked_models": ranked
     }
+
+_MODEL_CACHE: Dict[str, Any] = {}
+
+def execute_model_prediction(model_path: str, raw_inputs: Any) -> Dict[str, Any]:
+    """
+    Loads model artifact and executes real inference.
+    Handles numeric vectors, dictionaries of named features, and NLP text strings.
+    """
+    import time
+    import numpy as np
+    import pandas as pd
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model artifact not found at {model_path}")
+
+    start_time = time.perf_counter()
+
+    # Model caching for ultra-fast hosted inference
+    if model_path in _MODEL_CACHE:
+        model = _MODEL_CACHE[model_path]
+    else:
+        model = joblib.load(model_path)
+        _MODEL_CACHE[model_path] = model
+
+    # Format inputs based on type
+    if isinstance(raw_inputs, str):
+        # NLP text classification input
+        prepared_input = [raw_inputs]
+    elif isinstance(raw_inputs, dict):
+        # Dictionary of feature names
+        prepared_input = pd.DataFrame([raw_inputs])
+    elif isinstance(raw_inputs, list):
+        if len(raw_inputs) > 0 and isinstance(raw_inputs[0], (int, float)):
+            # Single 1D numeric feature vector -> reshape to 2D
+            prepared_input = np.array([raw_inputs])
+        elif len(raw_inputs) > 0 and isinstance(raw_inputs[0], str):
+            # List of strings for NLP
+            prepared_input = raw_inputs
+        else:
+            # Already 2D list
+            prepared_input = np.array(raw_inputs)
+    else:
+        prepared_input = raw_inputs
+
+    # Execute prediction
+    preds = model.predict(prepared_input)
+
+    # Convert numpy types to native Python for JSON serialization
+    if hasattr(preds, "tolist"):
+        preds_list = preds.tolist()
+    else:
+        preds_list = list(preds)
+
+    confidence = None
+    if hasattr(model, "predict_proba"):
+        try:
+            probas = model.predict_proba(prepared_input)
+            max_prob = float(np.max(probas[0]))
+            confidence = round(max_prob * 100, 1)
+        except Exception:
+            pass
+
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+    return {
+        "prediction": preds_list,
+        "primary_result": preds_list[0] if len(preds_list) > 0 else None,
+        "confidence_percentage": confidence,
+        "latency_ms": latency_ms,
+    }
+

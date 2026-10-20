@@ -400,3 +400,36 @@ export async function fetchMarketplaceStatsFromDb(): Promise<{
   return null;
 }
 
+export async function runModelInference(
+  modelId: number,
+  licensee: string,
+  inputs: any
+): Promise<{
+  success: boolean;
+  prediction?: any;
+  primary_result?: any;
+  confidence_percentage?: number;
+  latency_ms?: number;
+  license_status?: any;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/models/${modelId}/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        licensee: licensee || "0x0000000000000000000000000000000000000000",
+        inputs,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.detail || "Inference failed" };
+    }
+    return { success: true, ...data };
+  } catch (e: any) {
+    return { success: false, error: e.message || "Failed to reach inference engine" };
+  }
+}
+
+

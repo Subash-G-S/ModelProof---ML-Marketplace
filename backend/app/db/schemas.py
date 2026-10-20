@@ -117,3 +117,20 @@ class MarketplaceStats(BaseModel):
     total_volume_eth: float
     total_creators: int
     total_buyers: int
+
+# --- Inference / Prediction Schemas ---
+
+class PredictionRequest(BaseModel):
+    licensee: str
+    inputs: Any
+
+class PredictionResponse(BaseModel):
+    success: bool
+    model_id: int
+    model_name: str
+    prediction: Any
+    primary_result: Any
+    confidence_percentage: Optional[float] = None
+    latency_ms: float
+    license_status: Dict[str, Any]
+
