@@ -19,6 +19,8 @@ from app.services.ml_service import (
     analyze_model_artifact,
     generate_comparative_recommendation
 )
+from app.db.init_db import init_db
+from app.routes import api
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MODELS_DIR = os.path.join(BASE_DIR, "ml", "models")
@@ -30,6 +32,12 @@ METADATA_FILE = os.path.join(MODELS_DIR, "models_metadata.json")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("[+] ModelProof AI Engine starting...")
+    try:
+        init_db()
+        print("[+] ModelProof SQLite database initialized & verified.")
+    except Exception as e:
+        print(f"[!] Database init warning: {e}")
+
     if os.path.exists(METADATA_FILE):
         print(f"[+] Loaded ML metadata from: {METADATA_FILE}")
     else:
@@ -42,18 +50,20 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="ModelProof API",
-    description="AI/ML Model Analysis, Fingerprinting & Recommendation Engine",
+    description="AI/ML Model Analysis, Fingerprinting, Database & Recommendation Engine",
     version="1.0.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api.router)
 
 # ---------------------------------------------------------------------------
 # Pydantic Models
