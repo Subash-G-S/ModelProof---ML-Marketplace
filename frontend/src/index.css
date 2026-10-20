@@ -1,32 +1,40 @@
 @import "tailwindcss";
 
 /* =========================================================================
-   ModelProof — Design System Foundation
-   Dark-first AI/Web3 SaaS aesthetic
+   ModelProof — Swiss Minimalist Editorial & Warm Charcoal Design System
+   Color Palette: Warm Asphalt Charcoal + Rich Amber Gold
    ========================================================================= */
 
 @theme {
-  --color-mp-bg: #0a0a0f;
-  --color-mp-surface: #12121a;
-  --color-mp-surface-2: #1a1a26;
-  --color-mp-border: #2a2a3a;
-  --color-mp-border-subtle: #1f1f2e;
-  --color-mp-text: #e4e4ed;
-  --color-mp-text-muted: #8b8b9e;
-  --color-mp-text-dim: #5a5a6e;
-  --color-mp-accent: #7c5cff;
-  --color-mp-accent-light: #9d82ff;
-  --color-mp-accent-glow: rgba(124, 92, 255, 0.15);
-  --color-mp-success: #34d399;
-  --color-mp-warning: #fbbf24;
-  --color-mp-danger: #f87171;
-  --color-mp-info: #60a5fa;
+  --color-mp-bg: #0c0c0e;
+  --color-mp-surface: #141417;
+  --color-mp-surface-2: #1b1b20;
+  --color-mp-surface-3: #222228;
+  --color-mp-border: #26262d;
+  --color-mp-border-subtle: #1c1c22;
+  --color-mp-border-hover: #3d3d48;
+  
+  --color-mp-text: #f4f4f6;
+  --color-mp-text-muted: #9e9ea8;
+  --color-mp-text-dim: #656570;
 
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  /* Warm Editorial Amber & Gold Accents */
+  --color-mp-accent: #d97706;
+  --color-mp-accent-light: #f59e0b;
+  --color-mp-accent-glow: rgba(245, 158, 11, 0.12);
+  --color-mp-gold: #fbbf24;
+  --color-mp-gold-subtle: rgba(251, 191, 36, 0.1);
+
+  --color-mp-success: #10b981;
+  --color-mp-warning: #f59e0b;
+  --color-mp-danger: #f43f5e;
+  --color-mp-info: #38bdf8;
+
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* ---- Base ---- */
+/* ---- Global Resets & Typography ---- */
 * {
   box-sizing: border-box;
 }
@@ -34,10 +42,11 @@
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--color-mp-bg);
+  background-color: var(--color-mp-bg);
   color: var(--color-mp-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
 
 #root {
@@ -46,15 +55,37 @@ body {
   flex-direction: column;
 }
 
-/* ---- Scrollbar ---- */
+/* Subtle architectural dot grid background */
+.editorial-grid-bg {
+  background-image: radial-gradient(rgba(245, 158, 11, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Swiss Minimalist hairline borders */
+.hairline-border {
+  border: 1px solid var(--color-mp-border);
+}
+
+.hairline-border-hover {
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.hairline-border-hover:hover {
+  border-color: var(--color-mp-accent-light);
+  box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.08);
+}
+
+/* ---- Custom Scrollbar ---- */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-mp-border);
-  border-radius: 3px;
+  background: #2a2a32;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3e3e48;
 }

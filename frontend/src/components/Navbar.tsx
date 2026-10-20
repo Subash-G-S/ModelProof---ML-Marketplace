@@ -8,6 +8,12 @@ import {
   Users,
   CheckCircle2,
   AlertTriangle,
+  Layers,
+  ArrowUpRight,
+  ChevronDown,
+  Activity,
+  BarChart3,
+  Scale,
 } from "lucide-react";
 import { ThreeAccountModal } from "./ThreeAccountModal";
 
@@ -38,7 +44,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
 
   const handleRoleSwitch = (newRole: UserRole) => {
     switchRole(newRole);
-    // Automatically redirect if current path is restricted under the newly selected role
     if (newRole === "buyer" && (location.pathname === "/dashboard" || location.pathname === "/register" || location.pathname === "/admin")) {
       navigate("/marketplace");
     } else if (newRole === "creator" && (location.pathname === "/licenses" || location.pathname === "/admin")) {
@@ -48,88 +53,75 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
     }
   };
 
-  // Check if current connected address matches active role's assigned address
-  const activeRoleAddress = configuredAccounts[role];
-  const isAddressMatchingRole =
-    !activeRoleAddress ||
-    !address ||
-    activeRoleAddress.toLowerCase() === address.toLowerCase();
+  const navLinks = [
+    { label: "Marketplace", path: "/marketplace" },
+    ...(role === "buyer" ? [{ label: "My Licenses", path: "/licenses" }] : []),
+    ...(role === "creator"
+      ? [
+          { label: "Register Model", path: "/register" },
+          { label: "Creator Studio", path: "/dashboard" },
+        ]
+      : []),
+    ...(role === "admin" ? [{ label: "Protocol Governance", path: "/admin" }] : []),
+    { label: "Verify", path: "/verify" },
+    { label: "Compare", path: "/compare" },
+    { label: "Analytics", path: "/analytics" },
+  ];
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-mp-border/60 bg-mp-bg/85 backdrop-blur-md">
-        <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Brand */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-mp-accent to-indigo-600 flex items-center justify-center shadow-lg shadow-mp-accent/20 transition-transform group-hover:scale-105">
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <span className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-                ModelProof
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-mp-accent/20 text-mp-accent-light border border-mp-accent/30">
-                  Web3
+      <header className="sticky top-3 z-50 w-full px-3 sm:px-6 max-w-7xl mx-auto transition-all">
+        <div className="rounded-2xl border border-mp-border bg-mp-surface/90 backdrop-blur-xl px-4 py-2.5 shadow-2xl shadow-black/50 flex items-center justify-between gap-3">
+          
+          {/* Brand - Swiss Minimalist Typography */}
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="h-8 w-8 rounded-lg bg-mp-surface-2 border border-mp-border group-hover:border-mp-accent-light flex items-center justify-center transition-all">
+                <span className="font-mono font-black text-xs text-mp-accent-light">MP</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold tracking-tight text-white uppercase">
+                  ModelProof
                 </span>
-              </span>
-            </div>
-          </Link>
+                <span className="h-1.5 w-1.5 rounded-full bg-mp-accent-light" />
+              </div>
+            </Link>
 
-          {/* Center / Quick Info */}
-          <div className="hidden lg:flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-mp-surface border border-mp-border text-mp-text-muted">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>
-                Settlement Split:{" "}
-                <strong className="text-emerald-400">98% Creator</strong> •{" "}
-                <strong className="text-purple-400">2% Admin</strong>
-              </span>
-            </div>
+            {/* Nav Links */}
+            <nav className="hidden lg:flex items-center gap-1 border-l border-mp-border/60 pl-4">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path;
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isActive
+                        ? "bg-mp-surface-2 text-white font-semibold border border-mp-border"
+                        : "text-mp-text-muted hover:text-white hover:bg-mp-surface-2/40"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Right side controls */}
+          {/* Right Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* 3 Accounts Button */}
-            <button
-              onClick={() => setIsAccountsModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-mp-surface hover:bg-mp-surface-2 text-mp-text hover:text-white border border-mp-border hover:border-mp-accent transition-all text-xs font-medium shadow-sm"
-              title="Manage 3 MetaMask accounts (Buyer, Creator, Admin)"
-            >
-              <Users className="h-3.5 w-3.5 text-mp-accent-light" />
-              <span className="hidden sm:inline">3 Accounts</span>
-              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-mp-accent/20 text-mp-accent-light">
-                3
-              </span>
-            </button>
-
-            {/* AI Assistant button */}
-            <button
-              onClick={onOpenAssistant}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-mp-surface-2 hover:bg-mp-surface text-mp-accent-light hover:text-white border border-mp-accent/30 hover:border-mp-accent transition-all text-xs font-medium shadow-sm"
-              title="Ask ModelProof AI"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-mp-accent" />
-              <span>AI</span>
-            </button>
-
-            {/* Role switcher */}
-            <div className="flex items-center bg-mp-surface rounded-xl p-0.5 border border-mp-border text-xs shadow-inner">
+            {/* Minimalist Role Pill Switcher */}
+            <div className="flex items-center bg-mp-bg rounded-xl p-1 border border-mp-border/80 text-[11px] font-mono">
               {(["buyer", "creator", "admin"] as const).map((r) => {
                 const isActive = role === r;
-                const activeColor =
-                  r === "creator"
-                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-500/20"
-                    : r === "admin"
-                    ? "bg-purple-600 text-white shadow-sm shadow-purple-500/20"
-                    : "bg-blue-600 text-white shadow-sm shadow-blue-500/20";
-
                 return (
                   <button
                     key={r}
                     onClick={() => handleRoleSwitch(r)}
-                    className={`px-3 py-1 rounded-lg capitalize font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg uppercase tracking-wider font-semibold transition-all ${
                       isActive
-                        ? activeColor
-                        : "text-mp-text-muted hover:text-mp-text hover:bg-mp-surface-2/60"
+                        ? "bg-mp-surface-2 text-mp-accent-light border border-mp-accent/40 shadow-sm"
+                        : "text-mp-text-dim hover:text-mp-text"
                     }`}
                     title={`Switch role to ${r}`}
                   >
@@ -139,80 +131,87 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
               })}
             </div>
 
-            {/* Network indicator */}
+            {/* 3 Accounts Configuration */}
             <button
-              onClick={() => switchNetwork(chainId === 11155111 ? 31337 : 11155111)}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-                isCorrectNetwork
-                  ? "bg-mp-surface border-mp-border text-mp-text hover:border-mp-accent/50"
-                  : "bg-red-500/15 border-red-500/40 text-red-400 hover:bg-red-500/25 animate-pulse"
-              }`}
-              title="Click to switch network in MetaMask"
+              onClick={() => setIsAccountsModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-mp-surface-2 hover:bg-mp-surface-3 text-mp-text hover:text-white border border-mp-border text-xs font-medium transition-all"
+              title="Manage 3 MetaMask Accounts (Buyer, Creator, Admin)"
             >
-              {isCorrectNetwork ? (
-                <span className="h-2 w-2 rounded-full bg-mp-success" />
-              ) : (
-                <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
-              )}
-              <span>{isCorrectNetwork ? networkName : "Switch Network"}</span>
+              <Users className="h-3.5 w-3.5 text-mp-accent-light" />
+              <span className="hidden md:inline text-[11px]">3 Wallets</span>
             </button>
 
-            {/* Wallet Connection */}
-            {isConnected && address ? (
-              <div className="flex items-center gap-2">
-                <div
-                  onClick={() => setIsAccountsModalOpen(true)}
-                  className="hidden sm:flex flex-col text-right cursor-pointer hover:opacity-80"
-                  title="Click to manage 3 accounts"
-                >
-                  <span className="text-xs font-semibold text-white tracking-wide font-mono">
-                    {displayAddress}
+            {/* Network Badge */}
+            <button
+              onClick={() => switchNetwork(chainId === 11155111 ? 31337 : 11155111)}
+              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono transition-colors ${
+                isCorrectNetwork
+                  ? "bg-mp-bg border-mp-border text-mp-text-muted hover:text-white"
+                  : "bg-red-500/10 border-red-500/30 text-red-400"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${isCorrectNetwork ? "bg-emerald-400" : "bg-red-400 animate-pulse"}`} />
+              <span>{isCorrectNetwork ? networkName : "Wrong Net"}</span>
+            </button>
+
+            {/* Wallet Button */}
+            {isConnected ? (
+              <div className="flex items-center gap-2 bg-mp-surface-2 border border-mp-border rounded-xl px-2.5 py-1">
+                {balance && (
+                  <span className="text-xs font-mono font-semibold text-mp-accent-light hidden sm:inline">
+                    {parseFloat(balance).toFixed(3)} ETH
                   </span>
-                  <span className="text-[11px] text-mp-accent-light font-mono font-medium">
-                    {balance}
-                  </span>
-                </div>
+                )}
                 <button
                   onClick={disconnectWallet}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-mp-surface hover:bg-red-500/10 text-mp-text hover:text-red-400 border border-mp-border hover:border-red-500/30 transition-all text-xs font-medium"
-                  title="Disconnect MetaMask wallet"
+                  className="font-mono text-xs text-white hover:text-mp-accent-light px-1.5 py-0.5 rounded transition-colors"
+                  title="Disconnect wallet"
                 >
-                  <Wallet className="h-3.5 w-3.5 text-mp-accent" />
-                  <span className="hidden sm:inline">Disconnect</span>
+                  {displayAddress}
                 </button>
               </div>
             ) : (
               <button
                 onClick={connectWallet}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold tracking-wide shadow-lg shadow-mp-accent/20 transition-all active:scale-95 animate-pulse"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold shadow-md transition-all active:scale-95"
               >
-                <Wallet className="h-4 w-4" />
-                <span>Connect MetaMask</span>
+                <Wallet className="h-3.5 w-3.5" />
+                <span>Connect</span>
               </button>
             )}
+
+            {/* AI Assistant Button */}
+            <button
+              onClick={onOpenAssistant}
+              className="flex items-center justify-center h-8 w-8 rounded-xl bg-mp-surface-2 border border-mp-border text-mp-accent-light hover:text-white hover:border-mp-accent-light transition-all"
+              title="Open AI Analysis Assistant"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* Warning banner if current connected account differs from active role assigned address */}
-        {!isAddressMatchingRole && isConnected && (
-          <div className="bg-amber-500/15 border-t border-b border-amber-500/30 px-4 py-1.5 text-xs text-amber-300 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                MetaMask is currently on <strong>{displayAddress}</strong>, but active role is <strong>{role}</strong> (assigned to {activeRoleAddress.slice(0, 6)}...{activeRoleAddress.slice(-4)}).
-              </span>
-            </div>
-            <button
-              onClick={() => setIsAccountsModalOpen(true)}
-              className="text-[11px] font-semibold underline hover:text-white"
-            >
-              Open 3-Account Manager
-            </button>
-          </div>
-        )}
+        {/* Mobile secondary navigation */}
+        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto py-2 px-1 text-xs">
+          {navLinks.map((link) => {
+            const isActive = location.pathname === link.path;
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`whitespace-nowrap px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  isActive
+                    ? "bg-mp-surface text-white border border-mp-border"
+                    : "text-mp-text-muted hover:text-white"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
       </header>
 
-      {/* 3 Accounts Configuration Modal */}
       <ThreeAccountModal
         isOpen={isAccountsModalOpen}
         onClose={() => setIsAccountsModalOpen(false)}

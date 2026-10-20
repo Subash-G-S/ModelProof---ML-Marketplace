@@ -271,7 +271,7 @@ export const ModelDetails: React.FC = () => {
                 </div>
                 <button
                   onClick={() => switchRole("buyer")}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all"
+                  className="px-4 py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold shadow-sm transition-all"
                 >
                   Switch to Buyer to License
                 </button>
@@ -279,7 +279,7 @@ export const ModelDetails: React.FC = () => {
             )
           ) : role === "admin" ? (
             <div className="flex flex-wrap items-center gap-3">
-              <div className="px-4 py-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold">
+              <div className="px-4 py-2.5 rounded-xl bg-mp-surface-2 border border-mp-border text-mp-accent-light text-xs font-semibold">
                 Admin Protocol Mode (2% fee governance)
               </div>
               {model.active ? (
@@ -313,7 +313,7 @@ export const ModelDetails: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <button
                 onClick={handleBuyLicense}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 transition-all transform active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold shadow-lg shadow-mp-accent/20 transition-all transform active:scale-95"
               >
                 <Coins className="h-4 w-4" />
                 <span>Purchase 30-Day License ({model.licensePriceEth} ETH)</span>

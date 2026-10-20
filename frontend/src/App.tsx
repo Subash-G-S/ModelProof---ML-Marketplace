@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { WalletProvider } from "./context/WalletContext";
 import { ModelProvider } from "./context/ModelContext";
 import { Navbar } from "./components/Navbar";
-import { Sidebar } from "./components/Sidebar";
 import { RoleGuard } from "./components/RoleGuard";
 import { AIAssistantModal } from "./components/AIAssistantModal";
 
@@ -27,14 +26,11 @@ function App() {
     <WalletProvider>
       <ModelProvider>
         <Router>
-          <div className="min-h-screen bg-mp-bg text-mp-text flex flex-col font-sans selection:bg-mp-accent/30 selection:text-white">
+          <div className="min-h-screen bg-mp-bg text-mp-text flex flex-col font-sans selection:bg-mp-accent/20 selection:text-white editorial-grid-bg">
             <Navbar onOpenAssistant={() => setIsAssistantOpen(true)} />
 
-            <div className="flex-1 flex overflow-hidden">
-              <Sidebar />
-
-              <main className="flex-1 overflow-y-auto">
-                <Routes>
+            <main className="flex-1 w-full pb-16">
+              <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/marketplace" element={<Marketplace />} />
                   <Route path="/model/:id" element={<ModelDetails />} />
@@ -83,8 +79,7 @@ function App() {
                   <Route path="/activity" element={<Activity />} />
                   <Route path="/analytics" element={<Analytics />} />
                 </Routes>
-              </main>
-            </div>
+            </main>
 
             <AIAssistantModal
               isOpen={isAssistantOpen}

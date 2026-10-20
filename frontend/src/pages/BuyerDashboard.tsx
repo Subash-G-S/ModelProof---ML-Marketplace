@@ -12,6 +12,7 @@ import {
   AlertCircle,
   ArrowRight,
   Download,
+  KeyRound,
 } from "lucide-react";
 
 export const BuyerDashboard: React.FC = () => {
@@ -28,13 +29,18 @@ export const BuyerDashboard: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
-          My Model Licenses
+    <div className="space-y-8 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="border-b border-mp-border/80 pb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-mp-surface-2 border border-mp-border text-mp-accent-light">
+            Buyer License Vault
+          </span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Active Model Licenses<span className="text-mp-accent-light">.</span>
         </h1>
-        <p className="text-sm text-mp-text-muted mt-1">
-          Review time-limited cryptographic permissions purchased with ETH and verify corresponding model weights.
+        <p className="text-sm text-mp-text-muted mt-1 max-w-2xl">
+          Cryptographic permissions and model weight access settled directly via Ethereum smart contracts.
         </p>
       </div>
 
@@ -58,7 +64,7 @@ export const BuyerDashboard: React.FC = () => {
             return (
               <div
                 key={lic.licenseId}
-                className="rounded-2xl border border-mp-border bg-mp-surface p-6 flex flex-col justify-between space-y-4 shadow-sm"
+                className="rounded-2xl border border-mp-border bg-mp-surface hover:border-mp-accent-light/60 transition-all p-6 flex flex-col justify-between space-y-5 group"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -81,62 +87,64 @@ export const BuyerDashboard: React.FC = () => {
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-white mt-3">{lic.modelName}</h3>
+                  <h3 className="text-lg font-bold text-white mt-3 group-hover:text-mp-accent-light transition-colors">
+                    {lic.modelName}
+                  </h3>
                   <div className="text-xs text-mp-text-dim font-mono mt-1">
                     Creator: {lic.creator.slice(0, 6)}...{lic.creator.slice(-4)}
                   </div>
 
-                  <div className="mt-4 p-3 rounded-xl bg-mp-bg border border-mp-border/60 space-y-1.5 text-xs">
+                  <div className="mt-4 p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-2 text-xs font-mono">
                     <div className="flex items-center justify-between">
                       <span className="text-mp-text-dim">Purchased:</span>
-                      <span className="text-mp-text font-mono">
+                      <span className="text-mp-text">
                         {new Date(lic.issuedAt).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-mp-text-dim">Expires:</span>
-                      <span className="text-mp-text font-mono">
+                      <span className="text-mp-text">
                         {new Date(lic.expiry).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-mp-border/40">
-                      <span className="text-mp-text-dim">Remaining:</span>
-                      <span className="text-emerald-400 font-semibold font-mono">
-                        {daysLeft} days active
+                    <div className="flex items-center justify-between pt-1.5 border-t border-mp-border">
+                      <span className="text-mp-text-dim">Validity:</span>
+                      <span className="text-mp-accent-light font-bold">
+                        {daysLeft} days remaining
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-mp-border/60 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/verify?modelId=${lic.modelId}`}
-                      className="flex-1 py-2.5 rounded-xl bg-mp-surface-2 hover:bg-mp-accent text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5 text-mp-accent-light" />
-                      <span>Verify Model</span>
-                    </Link>
-                    <Link
-                      to={`/model/${lic.modelId}`}
-                      className="px-3 py-2.5 rounded-xl border border-mp-border hover:border-mp-accent text-mp-text hover:text-white text-xs transition-colors"
-                      title="View Model Details"
-                    >
-                      Details
-                    </Link>
-                  </div>
-
+                <div className="pt-3 border-t border-mp-border space-y-2.5">
                   {matchingModel?.filename && status === "ACTIVE" && (
                     <a
                       href={`http://localhost:8000/download-sample-model/${matchingModel.filename}`}
                       download
-                      className="w-full py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                      className="w-full py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-mp-accent/15"
                       title="Download licensed model artifact (.joblib)"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span>Download Model Weights ({matchingModel.filename})</span>
                     </a>
                   )}
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/verify?modelId=${lic.modelId}`}
+                      className="flex-1 py-2.5 rounded-xl bg-mp-surface-2 hover:bg-mp-surface-3 border border-mp-border text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 text-mp-accent-light" />
+                      <span>Verify Weights</span>
+                    </Link>
+                    <Link
+                      to={`/model/${lic.modelId}`}
+                      className="px-3 py-2.5 rounded-xl border border-mp-border hover:border-mp-accent-light text-mp-text hover:text-white text-xs transition-colors"
+                      title="View Model Specifications"
+                    >
+                      Specs
+                    </Link>
+                  </div>
 
                   <a
                     href={`https://sepolia.etherscan.io/tx/${lic.transactionHash}`}
@@ -153,19 +161,19 @@ export const BuyerDashboard: React.FC = () => {
           })}
         </div>
       ) : (
-        <div className="text-center py-16 rounded-2xl border border-mp-border bg-mp-surface p-8 space-y-4">
-          <FileCheck2 className="h-12 w-12 text-mp-text-dim mx-auto" />
+        <div className="text-center py-16 rounded-2xl border border-mp-border bg-mp-surface p-8 space-y-4 max-w-lg mx-auto">
+          <FileCheck2 className="h-10 w-10 text-mp-text-dim mx-auto" />
           <div>
-            <h3 className="text-base font-semibold text-white">No Licenses Acquired Yet</h3>
-            <p className="text-xs text-mp-text-muted mt-1 max-w-sm mx-auto">
-              You have not purchased any AI/ML model licenses yet. Explore the marketplace to find high-performance models.
+            <h3 className="text-base font-semibold text-white">No Model Licenses Acquired Yet</h3>
+            <p className="text-xs text-mp-text-muted mt-1">
+              You do not hold active permissions for any ML models. Browse the decentralized marketplace to acquire 30-day licenses.
             </p>
           </div>
           <Link
             to="/marketplace"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold transition-all shadow-sm"
           >
-            <span>Browse Marketplace</span>
+            <span>Browse Models</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
