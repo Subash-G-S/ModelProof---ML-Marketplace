@@ -18,7 +18,7 @@ import { TransactionModal, TxStep } from "../components/TransactionModal";
 
 export const RegisterModel: React.FC = () => {
   const navigate = useNavigate();
-  const { registerModel } = useModels();
+  const { registerModel, isSystemPaused } = useModels();
   const { address, isConnected, connectWallet } = useWallet();
 
   const [name, setName] = useState("");
@@ -80,6 +80,11 @@ export const RegisterModel: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSystemPaused) {
+      alert("Platform operations are currently PAUSED by Admin emergency circuit breaker. New model registrations are suspended.");
+      return;
+    }
 
     if (!isConnected) {
       await connectWallet();

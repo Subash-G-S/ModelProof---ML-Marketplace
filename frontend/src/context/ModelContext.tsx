@@ -9,6 +9,7 @@ import {
   executeDirectTransfer98_2,
   isContractDeployed,
   isModelRegisteredOnChain,
+  readIsContractPaused,
 } from "../services/contractService";
 import {
   fetchModelsFromDb,
@@ -17,6 +18,7 @@ import {
   savePurchaseToDb,
   fetchActivitiesFromDb,
   recordActivityInDb,
+  fetchGovernanceStatusFromDb,
 } from "../services/apiService";
 import { Address, Hash } from "viem";
 
@@ -24,6 +26,8 @@ interface ModelContextType {
   models: ModelRecord[];
   licenses: LicenseRecord[];
   activities: ActivityEvent[];
+  isSystemPaused: boolean;
+  checkIsSystemPaused: () => Promise<boolean>;
   registerModel: (
     modelData: Omit<ModelRecord, "modelId" | "createdAt" | "active">,
     onStatusUpdate?: (status: string, txHash?: string) => void
@@ -195,8 +199,23 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
   ]);
   const [activities, setActivities] = useState<ActivityEvent[]>(INITIAL_ACTIVITIES);
+  const [isSystemPaused, setIsSystemPaused] = useState<boolean>(false);
 
-  // Load persistent records from FastAPI SQLite backend on mount
+  const checkIsSystemPaused = async (): Promise<boolean> => {
+    try {
+      const [onChainPaused, govDb] = await Promise.all([
+        readIsContractPaused(chainId).catch(() => false),
+        fetchGovernanceStatusFromDb().catch(() => ({ paused: false, deactivated_users: [] })),
+      ]);
+      const paused = Boolean(onChainPaused || govDb?.paused);
+      setIsSystemPaused(paused);
+      return paused;
+    } catch {
+      return isSystemPaused;
+    }
+  };
+
+  // Load persistent records from FastAPI SQLite backend on mount & periodically sync pause state
   useEffect(() => {
     let isMounted = true;
     async function loadDatabaseData() {
@@ -216,16 +235,26 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (dbActivities && dbActivities.length > 0) {
             setActivities(dbActivities);
           }
+          await checkIsSystemPaused();
         }
       } catch (e) {
         console.warn("Could not load database records on mount:", e);
       }
     }
     loadDatabaseData();
+
+    // Check pause and governance status every 3 seconds to keep UI responsive
+    const interval = setInterval(() => {
+      if (isMounted) {
+        checkIsSystemPaused().catch(() => {});
+      }
+    }, 3000);
+
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
-  }, []);
+  }, [chainId]);
 
   const generateFallbackTxHash = () => {
     const chars = "0123456789abcdef";
@@ -240,6 +269,11 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     data: Omit<ModelRecord, "modelId" | "createdAt" | "active">,
     onStatusUpdate?: (status: string, txHash?: string) => void
   ) => {
+    const paused = await checkIsSystemPaused();
+    if (paused) {
+      throw new Error("Platform operations are currently PAUSED by Admin emergency circuit breaker. Model registration is suspended.");
+    }
+
     let txHash: string;
 
     // Check if MetaMask is available and connected
@@ -337,6 +371,11 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     parentModelId: number,
     versionData: Partial<ModelRecord>
   ) => {
+    const paused = await checkIsSystemPaused();
+    if (paused) {
+      throw new Error("Platform operations are currently PAUSED by Admin emergency circuit breaker. New version deployment is suspended.");
+    }
+
     const parent = models.find((m) => m.modelId === parentModelId);
     if (!parent) throw new Error("Parent model not found");
 
@@ -389,6 +428,20 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (!address) {
       throw new Error("Please connect your MetaMask wallet first.");
+    }
+
+    const paused = await checkIsSystemPaused();
+    if (paused) {
+      throw new Error("Platform operations are currently PAUSED by Admin emergency circuit breaker. Model licensing is temporarily disabled.");
+    }
+
+    try {
+      const gov = await fetchGovernanceStatusFromDb();
+      if (gov?.deactivated_users?.map((u: string) => u.toLowerCase()).includes(address.toLowerCase())) {
+        throw new Error("Your wallet account has been deactivated by administrator. Licensing is not permitted.");
+      }
+    } catch (e: any) {
+      if (e.message?.includes("deactivated") || e.message?.includes("PAUSED")) throw e;
     }
 
     const hasConfiguredCreator = Boolean(
@@ -541,6 +594,20 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (!address) {
       throw new Error("Please connect your MetaMask wallet first.");
+    }
+
+    const paused = await checkIsSystemPaused();
+    if (paused) {
+      throw new Error("Platform operations are currently PAUSED by Admin emergency circuit breaker. Model ownership purchases are temporarily disabled.");
+    }
+
+    try {
+      const gov = await fetchGovernanceStatusFromDb();
+      if (gov?.deactivated_users?.map((u: string) => u.toLowerCase()).includes(address.toLowerCase())) {
+        throw new Error("Your wallet account has been deactivated by administrator. Model purchases are not permitted.");
+      }
+    } catch (e: any) {
+      if (e.message?.includes("deactivated") || e.message?.includes("PAUSED")) throw e;
     }
 
     const hasConfiguredCreator = Boolean(
@@ -791,6 +858,8 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         models,
         licenses,
         activities,
+        isSystemPaused,
+        checkIsSystemPaused,
         registerModel,
         createModelVersion,
         purchaseLicense,

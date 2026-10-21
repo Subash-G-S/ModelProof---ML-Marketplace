@@ -121,6 +121,11 @@ def get_model_by_hash(model_hash: str, db: Session = Depends(get_db)):
 
 @router.post("/models", response_model=ModelResponse)
 def register_model(payload: ModelCreate, db: Session = Depends(get_db)):
+    if SYSTEM_PAUSED:
+        raise HTTPException(status_code=403, detail="Platform is currently paused by admin emergency circuit breaker.")
+    if payload.creator.lower() in DEACTIVATED_USERS:
+        raise HTTPException(status_code=403, detail="Creator account is deactivated by admin.")
+
     # Check if hash already exists
     existing = db.query(ModelDB).filter(ModelDB.model_hash.ilike(payload.model_hash.lower())).first()
     if existing:
@@ -182,9 +187,14 @@ def register_model(payload: ModelCreate, db: Session = Depends(get_db)):
 
 @router.post("/models/{model_id}/version", response_model=ModelResponse)
 def create_model_version(model_id: int, payload: ModelVersionCreate, db: Session = Depends(get_db)):
+    if SYSTEM_PAUSED:
+        raise HTTPException(status_code=403, detail="Platform is currently paused by admin emergency circuit breaker.")
+
     parent = db.query(ModelDB).filter(ModelDB.model_id == model_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent model not found")
+    if parent.creator.lower() in DEACTIVATED_USERS:
+        raise HTTPException(status_code=403, detail="Creator account is deactivated by admin.")
 
     now_ms = int(time.time() * 1000)
     try:
@@ -406,6 +416,17 @@ def get_licenses(
 
 @router.post("/licenses", response_model=LicenseResponse)
 def purchase_license(payload: LicenseCreate, db: Session = Depends(get_db)):
+    if SYSTEM_PAUSED:
+        raise HTTPException(
+            status_code=403,
+            detail="Platform is currently paused by admin emergency circuit breaker. Licensing and model purchases are disabled."
+        )
+    if payload.licensee.lower() in DEACTIVATED_USERS:
+        raise HTTPException(
+            status_code=403,
+            detail="Buyer wallet is deactivated by administrator. Purchases not permitted."
+        )
+
     model = db.query(ModelDB).filter(ModelDB.model_id == payload.model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -544,6 +565,11 @@ def download_model_weights(
     Direct model artifact download endpoint.
     If licensee is provided, checks database for valid active license.
     """
+    if SYSTEM_PAUSED:
+        raise HTTPException(status_code=403, detail="Platform is currently paused by admin emergency circuit breaker. Downloads are temporarily suspended.")
+    if licensee and licensee.lower() in DEACTIVATED_USERS:
+        raise HTTPException(status_code=403, detail="User account is deactivated by administrator.")
+
     model = db.query(ModelDB).filter(ModelDB.model_id == model_id).first()
     if not model or not model.filename:
         raise HTTPException(status_code=404, detail="Model artifact not registered")
@@ -616,6 +642,17 @@ def predict_model_inference(
 
     now_ms = int(time.time() * 1000)
     user_address = payload.licensee.strip().lower()
+
+    if SYSTEM_PAUSED:
+        raise HTTPException(
+            status_code=403,
+            detail="Platform is currently paused by admin emergency circuit breaker. Model inference is temporarily suspended."
+        )
+    if user_address in DEACTIVATED_USERS:
+        raise HTTPException(
+            status_code=403,
+            detail="User account is deactivated by administrator. Access denied."
+        )
 
     # 1. Check if user is the model creator
     is_creator = model.creator.lower() == user_address

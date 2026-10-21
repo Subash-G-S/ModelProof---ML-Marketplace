@@ -40,6 +40,7 @@ export const ModelDetails: React.FC = () => {
     hasFullOwnership,
     deactivateModel,
     reactivateModel,
+    isSystemPaused,
   } = useModels();
   const { address, isConnected, connectWallet, configuredAccounts, role, switchRole } = useWallet();
 
@@ -159,6 +160,11 @@ else:
   };
 
   const handleBuy = async (tierOverride?: "license" | "ownership") => {
+    if (isSystemPaused) {
+      alert("Platform operations are currently PAUSED by Admin emergency circuit breaker. Licensing and model purchases are temporarily disabled.");
+      return;
+    }
+
     if (!isConnected) {
       await connectWallet();
       return;
@@ -583,17 +589,31 @@ elif response.status_code == 403:
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
                   onClick={() => handleBuy("license")}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-mp-surface-2 hover:bg-mp-surface border border-mp-border text-white text-xs font-semibold shadow-sm transition-all"
+                  disabled={isSystemPaused}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-semibold shadow-sm transition-all ${
+                    isSystemPaused
+                      ? "bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed"
+                      : "bg-mp-surface-2 hover:bg-mp-surface border-mp-border text-white"
+                  }`}
                 >
                   <Coins className="h-3.5 w-3.5 text-mp-accent-light" />
-                  <span>Purchase 30-Day License ({model.licensePriceEth} ETH)</span>
+                  <span>
+                    {isSystemPaused ? "Paused by Admin" : `Purchase 30-Day License (${model.licensePriceEth} ETH)`}
+                  </span>
                 </button>
                 <button
                   onClick={() => handleBuy("ownership")}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all"
+                  disabled={isSystemPaused}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition-all ${
+                    isSystemPaused
+                      ? "bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+                  }`}
                 >
                   <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                  <span>Buy Whole Model ({fullOwnershipPrice} ETH)</span>
+                  <span>
+                    {isSystemPaused ? "Paused by Admin" : `Buy Whole Model (${fullOwnershipPrice} ETH)`}
+                  </span>
                 </button>
               </div>
             </div>
@@ -707,6 +727,18 @@ elif response.status_code == 403:
             </div>
           ) : (
             <div className="w-full space-y-4">
+              {isSystemPaused && (
+                <div className="p-4 rounded-xl border border-red-500/40 bg-red-950/40 flex items-start gap-3 text-red-300 text-xs shadow-md">
+                  <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-red-300 text-sm">Emergency Circuit Breaker Active (Platform Paused)</div>
+                    <p className="text-[11px] text-red-200/80 mt-0.5">
+                      Platform administrator has temporarily paused all marketplace operations. Model licensing, purchases, and ETH settlement are currently frozen.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Dual Tier Selector Cards */}
               <div className="grid sm:grid-cols-2 gap-3.5">
                 {/* Option 1: 30-Day License */}
@@ -773,15 +805,20 @@ elif response.status_code == 403:
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                 <button
                   onClick={() => handleBuy()}
-                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg transition-all transform active:scale-95 ${
-                    selectedTier === "ownership"
-                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/20"
-                      : "bg-mp-accent hover:bg-mp-accent-light text-white shadow-mp-accent/20"
+                  disabled={isSystemPaused}
+                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg transition-all transform ${
+                    isSystemPaused
+                      ? "bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed"
+                      : selectedTier === "ownership"
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/20 active:scale-95"
+                      : "bg-mp-accent hover:bg-mp-accent-light text-white shadow-mp-accent/20 active:scale-95"
                   }`}
                 >
                   <Coins className="h-4 w-4" />
                   <span>
-                    {selectedTier === "ownership"
+                    {isSystemPaused
+                      ? "Platform Paused by Admin (Circuit Breaker)"
+                      : selectedTier === "ownership"
                       ? `Buy Whole Model (${fullOwnershipPrice} ETH) • ModelProof Verified™`
                       : `Purchase 30-Day License (${model.licensePriceEth} ETH)`}
                   </span>
