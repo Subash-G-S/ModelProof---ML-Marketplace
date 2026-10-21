@@ -22,6 +22,9 @@ import {
   Zap,
   Check,
   AlertCircle,
+  Download,
+  Award,
+  Sparkles,
 } from "lucide-react";
 import { TransactionModal, TxStep } from "../components/TransactionModal";
 import { runModelInference } from "../services/apiService";
@@ -29,7 +32,15 @@ import { runModelInference } from "../services/apiService";
 export const ModelDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { models, purchaseLicense, hasActiveLicense, deactivateModel, reactivateModel } = useModels();
+  const {
+    models,
+    purchaseLicense,
+    purchaseModelOwnership,
+    hasActiveLicense,
+    hasFullOwnership,
+    deactivateModel,
+    reactivateModel,
+  } = useModels();
   const { address, isConnected, connectWallet, configuredAccounts, role, switchRole } = useWallet();
 
   const [copied, setCopied] = useState(false);
@@ -38,6 +49,7 @@ export const ModelDetails: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<"license" | "ownership">("ownership");
 
   const model = models.find((m) => m.modelId === Number(id));
 
@@ -52,13 +64,17 @@ export const ModelDetails: React.FC = () => {
     );
   }
 
-  const isLicensed = address ? hasActiveLicense(model.modelId, address) : false;
+  const isFullOwner = address ? hasFullOwnership(model.modelId, address) : false;
+  const isLicensed = address ? (hasActiveLicense(model.modelId, address) || isFullOwner) : false;
   const isCreator = address
     ? model.creator.toLowerCase() === address.toLowerCase() ||
       Boolean(configuredAccounts.creator && configuredAccounts.creator.toLowerCase() === address.toLowerCase()) ||
       role === "creator"
     : role === "creator";
-  const canAccessWeights = isLicensed || isCreator || role === "admin";
+  const canAccessWeights = isLicensed || isCreator || role === "admin" || isFullOwner;
+
+  const fullOwnershipPrice = (parseFloat(model.licensePriceEth) * 3).toFixed(4);
+  const currentTierPrice = selectedTier === "ownership" ? fullOwnershipPrice : model.licensePriceEth;
 
   // Hosted Inference Playground state
   const [activePlaygroundTab, setActivePlaygroundTab] = useState<"playground" | "python_api">("playground");
@@ -142,18 +158,23 @@ else:
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleBuyLicense = async () => {
+  const handleBuy = async (tierOverride?: "license" | "ownership") => {
     if (!isConnected) {
       await connectWallet();
       return;
     }
+
+    const tierToPurchase = tierOverride || selectedTier;
 
     try {
       setIsModalOpen(true);
       setTxStep("wallet_prompt");
       setStatusMessage("Please inspect and approve the transaction in MetaMask.");
 
-      const result = await purchaseLicense(model.modelId, (status, hash) => {
+      const isOwnership = tierToPurchase === "ownership";
+      const buyFn = isOwnership ? purchaseModelOwnership : purchaseLicense;
+
+      const result = await buyFn(model.modelId, (status, hash) => {
         if (hash) {
           setTxHash(hash);
           setTxStep("submitted");
@@ -209,11 +230,19 @@ else:
           </div>
 
           <div className="flex flex-col sm:items-end">
-            <span className="text-xs text-mp-text-dim">License Price (30 Days)</span>
-            <span className="text-2xl sm:text-3xl font-mono font-bold text-white mt-0.5">
-              {model.licensePriceEth} <span className="text-mp-accent-light text-xl">ETH</span>
-            </span>
-            <span className="text-[11px] text-emerald-400 mt-1">98% to Creator • 2% to Admin Protocol</span>
+            <span className="text-xs text-mp-text-dim">Acquisition Pricing</span>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-2xl sm:text-3xl font-mono font-bold text-white">
+                {model.licensePriceEth} <span className="text-mp-accent-light text-xl">ETH</span>
+              </span>
+              <span className="text-xs text-mp-text-muted">(30-Day License)</span>
+            </div>
+            <div className="text-xs font-mono font-semibold text-emerald-400 mt-1 flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+              <Sparkles className="h-3 w-3 text-amber-400" />
+              <span>{fullOwnershipPrice} ETH</span>
+              <span className="text-mp-text-muted font-sans font-normal text-[11px]">• ModelProof Verified™ Full Ownership</span>
+            </div>
+            <span className="text-[11px] text-mp-text-dim mt-1">98% to Creator • 2% to Admin Protocol</span>
           </div>
         </div>
 
@@ -551,19 +580,28 @@ elif response.status_code == 403:
                 </p>
               </div>
 
-              <button
-                onClick={handleBuyLicense}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold shadow-md shadow-mp-accent/15 transition-all"
-              >
-                <Coins className="h-3.5 w-3.5" />
-                <span>Purchase 30-Day License ({model.licensePriceEth} ETH)</span>
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  onClick={() => handleBuy("license")}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-mp-surface-2 hover:bg-mp-surface border border-mp-border text-white text-xs font-semibold shadow-sm transition-all"
+                >
+                  <Coins className="h-3.5 w-3.5 text-mp-accent-light" />
+                  <span>Purchase 30-Day License ({model.licensePriceEth} ETH)</span>
+                </button>
+                <button
+                  onClick={() => handleBuy("ownership")}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                  <span>Buy Whole Model ({fullOwnershipPrice} ETH)</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Action Buttons based on Role Authorization */}
-        <div className="pt-4 border-t border-mp-border/60 flex flex-wrap items-center gap-4">
+        <div className="pt-4 border-t border-mp-border/60 flex flex-col gap-4">
           {role === "creator" ? (
             isCreator ? (
               <div className="flex flex-wrap items-center gap-3">
@@ -618,49 +656,168 @@ elif response.status_code == 403:
                 </button>
               )}
             </div>
+          ) : isFullOwner ? (
+            <div className="w-full p-5 rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-r from-emerald-950/30 via-mp-surface to-mp-surface-2 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-amber-300" />
+                    <span>ModelProof Verified™ Full Ownership</span>
+                  </span>
+                  <span className="text-xs text-white font-semibold">
+                    You own this model permanently on Ethereum
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 self-start sm:self-auto">
+                  Lifetime Perpetual Access
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <a
+                  href={`http://localhost:8000/api/models/${model.modelId}/download?licensee=${address}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download Model Weights ({model.filename || "model.joblib"})</span>
+                </a>
+                <Link
+                  to={`/verify?modelId=${model.modelId}`}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-mp-surface-2 hover:bg-mp-surface-3 border border-mp-border text-white text-xs font-semibold transition-all"
+                >
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                  <span>Verify Authenticity Certificate</span>
+                </Link>
+              </div>
+            </div>
           ) : isLicensed ? (
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Active License Acquired (Valid for 30 Days)</span>
+            <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-mp-bg border border-mp-border">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Active 30-Day License Acquired</span>
+              </div>
+              <button
+                onClick={() => handleBuy("ownership")}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 text-xs font-semibold transition-all"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                <span>Upgrade to ModelProof Verified™ Full Ownership ({fullOwnershipPrice} ETH)</span>
+              </button>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <button
-                onClick={handleBuyLicense}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-mp-accent hover:bg-mp-accent-light text-white text-xs font-semibold shadow-lg shadow-mp-accent/20 transition-all transform active:scale-95"
-              >
-                <Coins className="h-4 w-4" />
-                <span>Purchase 30-Day License ({model.licensePriceEth} ETH)</span>
-              </button>
+            <div className="w-full space-y-4">
+              {/* Dual Tier Selector Cards */}
+              <div className="grid sm:grid-cols-2 gap-3.5">
+                {/* Option 1: 30-Day License */}
+                <div
+                  onClick={() => setSelectedTier("license")}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                    selectedTier === "license"
+                      ? "border-mp-accent bg-mp-accent/10 ring-1 ring-mp-accent"
+                      : "border-mp-border bg-mp-bg hover:border-mp-border/80"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-mp-accent-light" />
+                        <span>30-Day License</span>
+                      </div>
+                      <div className="text-[11px] text-mp-text-muted mt-1 leading-snug">
+                        Hosted prediction API & real-time inference playground. DRM revoked upon 30-day expiry.
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-mono font-bold text-white">
+                        {model.licensePriceEth} ETH
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="px-3 py-2 rounded-xl bg-mp-bg border border-mp-border text-[11px] text-mp-text-muted flex items-center gap-2">
-                <span className="text-emerald-400 font-medium">
-                  Creator (98%): {(parseFloat(model.licensePriceEth) * 0.98).toFixed(4)} ETH
-                </span>
-                <span>•</span>
-                <span className="text-purple-400 font-medium">
-                  Admin (2%): {(parseFloat(model.licensePriceEth) * 0.02).toFixed(4)} ETH
-                </span>
+                {/* Option 2: Buy Whole Model (ModelProof Verified™) */}
+                <div
+                  onClick={() => setSelectedTier("ownership")}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all relative overflow-hidden ${
+                    selectedTier === "ownership"
+                      ? "border-emerald-500 bg-emerald-950/20 ring-1 ring-emerald-500"
+                      : "border-mp-border bg-mp-bg hover:border-emerald-500/50"
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 bg-emerald-500 text-black text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-bl-md flex items-center gap-1">
+                    <Sparkles className="h-2.5 w-2.5" />
+                    <span>ModelProof Verified™</span>
+                  </div>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                        <Award className="h-3.5 w-3.5 text-amber-400" />
+                        <span>Buy Whole Model</span>
+                      </div>
+                      <div className="text-[11px] text-mp-text-muted mt-1 leading-snug">
+                        Permanent lifetime access + raw weights download (.joblib) + on-chain ModelProof Verified™ proof.
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 mt-3 sm:mt-0">
+                      <div className="text-sm font-mono font-bold text-emerald-400">
+                        {fullOwnershipPrice} ETH
+                      </div>
+                      <div className="text-[10px] text-mp-text-dim">Lifetime</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Purchase Button and Fee Split */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <button
+                  onClick={() => handleBuy()}
+                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg transition-all transform active:scale-95 ${
+                    selectedTier === "ownership"
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/20"
+                      : "bg-mp-accent hover:bg-mp-accent-light text-white shadow-mp-accent/20"
+                  }`}
+                >
+                  <Coins className="h-4 w-4" />
+                  <span>
+                    {selectedTier === "ownership"
+                      ? `Buy Whole Model (${fullOwnershipPrice} ETH) • ModelProof Verified™`
+                      : `Purchase 30-Day License (${model.licensePriceEth} ETH)`}
+                  </span>
+                </button>
+
+                <div className="px-3 py-2 rounded-xl bg-mp-bg border border-mp-border text-[11px] text-mp-text-muted flex items-center gap-2">
+                  <span className="text-emerald-400 font-medium">
+                    Creator (98%): {(parseFloat(currentTierPrice) * 0.98).toFixed(4)} ETH
+                  </span>
+                  <span>•</span>
+                  <span className="text-purple-400 font-medium">
+                    Admin (2%): {(parseFloat(currentTierPrice) * 0.02).toFixed(4)} ETH
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
-          <Link
-            to={`/verify?modelId=${model.modelId}`}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl border border-mp-border hover:border-mp-accent bg-mp-surface-2 hover:bg-mp-surface text-white text-xs font-semibold transition-all"
-          >
-            <ShieldCheck className="h-4 w-4 text-mp-accent-light" />
-            <span>Verify Model Artifact</span>
-          </Link>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Link
+              to={`/verify?modelId=${model.modelId}`}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-mp-border hover:border-mp-accent bg-mp-surface-2 hover:bg-mp-surface text-white text-xs font-semibold transition-all"
+            >
+              <ShieldCheck className="h-4 w-4 text-mp-accent-light" />
+              <span>Verify Model Artifact</span>
+            </Link>
 
-          <a
-            href="#playground"
-            className="flex items-center gap-2 px-5 py-3 rounded-xl border border-mp-accent/40 bg-mp-accent/10 hover:bg-mp-accent/20 text-mp-accent-light hover:text-white text-xs font-semibold transition-all shadow-sm"
-            title="Access the hosted real-time prediction playground and developer API"
-          >
-            <Terminal className="h-4 w-4" />
-            <span>Hosted Inference API & Playground</span>
-          </a>
+            <a
+              href="#playground"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-mp-accent/40 bg-mp-accent/10 hover:bg-mp-accent/20 text-mp-accent-light hover:text-white text-xs font-semibold transition-all shadow-sm"
+              title="Access the hosted real-time prediction playground and developer API"
+            >
+              <Terminal className="h-4 w-4" />
+              <span>Hosted Inference API & Playground</span>
+            </a>
+          </div>
         </div>
       </div>
 
@@ -670,11 +827,15 @@ elif response.status_code == 403:
         txHash={txHash}
         errorMessage={errorMsg}
         statusMessage={statusMessage}
-        title="Purchase Model License (Sepolia Settlement)"
+        title={
+          selectedTier === "ownership"
+            ? "Acquire ModelProof Verified™ Full Ownership"
+            : "Purchase Model License (Sepolia Settlement)"
+        }
         splitInfo={{
-          totalEth: model.licensePriceEth,
-          creatorShareEth: (parseFloat(model.licensePriceEth) * 0.98).toFixed(4),
-          adminFeeEth: (parseFloat(model.licensePriceEth) * 0.02).toFixed(4),
+          totalEth: currentTierPrice,
+          creatorShareEth: (parseFloat(currentTierPrice) * 0.98).toFixed(4),
+          adminFeeEth: (parseFloat(currentTierPrice) * 0.02).toFixed(4),
           creatorAddress: configuredAccounts.creator || model.creator,
           adminAddress: configuredAccounts.admin,
         }}

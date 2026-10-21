@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.db.database import get_db, BASE_DIR
-from app.db.models import ModelDB, LicenseDB, ActivityDB, ArtifactDB
+from app.db.models import ModelDB, LicenseDB, ActivityDB, ArtifactDB, UserDB
 from app.db.schemas import (
     ModelCreate,
     ModelResponse,
@@ -23,9 +23,13 @@ from app.db.schemas import (
     PredictionRequest,
     PredictionResponse,
 )
+from pydantic import BaseModel
 from app.services.ml_service import compute_stream_sha256, analyze_model_artifact, execute_model_prediction
 
 router = APIRouter(prefix="/api", tags=["marketplace"])
+
+SYSTEM_PAUSED = False
+DEACTIVATED_USERS: set = set()
 
 STORAGE_DIR = os.path.join(BASE_DIR, "storage", "models")
 ML_MODELS_DIR = os.path.join(os.path.dirname(BASE_DIR), "ml", "models")
@@ -75,6 +79,7 @@ def license_to_response(lic: LicenseDB) -> LicenseResponse:
         price_eth=lic.price_eth,
         transaction_hash=lic.transaction_hash,
         created_at=lic.created_at,
+        license_type=getattr(lic, "license_type", "30_day_license") or "30_day_license",
     )
 
 # ---------------------------------------------------------------------------
@@ -227,6 +232,156 @@ def toggle_model_status(model_id: int, active: bool = Query(...), db: Session = 
     db.refresh(model)
     return model_to_response(model)
 
+@router.delete("/models/{model_id}")
+def delete_model(model_id: int, db: Session = Depends(get_db)):
+    model = db.query(ModelDB).filter(ModelDB.model_id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    model.active = False
+    model.description = "[DELETED BY ADMIN / CREATOR]"
+    db.commit()
+    return {"success": True, "model_id": model_id, "deleted": True}
+
+@router.post("/models/{model_id}/deactivate", response_model=ModelResponse)
+def deactivate_model(model_id: int, db: Session = Depends(get_db)):
+    model = db.query(ModelDB).filter(ModelDB.model_id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    model.active = False
+    db.commit()
+    db.refresh(model)
+    return model_to_response(model)
+
+@router.post("/models/{model_id}/reactivate", response_model=ModelResponse)
+def reactivate_model(model_id: int, db: Session = Depends(get_db)):
+    model = db.query(ModelDB).filter(ModelDB.model_id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    model.active = True
+    db.commit()
+    db.refresh(model)
+    return model_to_response(model)
+
+# ---------------------------------------------------------------------------
+# Admin Governance Endpoints (Pause / Resume & User Blacklist)
+# ---------------------------------------------------------------------------
+
+class UserStatusPayload(BaseModel):
+    user: str
+    deactivated: bool
+
+class PausePayload(BaseModel):
+    paused: bool
+
+@router.get("/admin/governance")
+def get_governance_status():
+    return {
+        "paused": SYSTEM_PAUSED,
+        "deactivated_users": list(DEACTIVATED_USERS),
+    }
+
+@router.post("/admin/governance/pause")
+def set_governance_pause(payload: PausePayload):
+    global SYSTEM_PAUSED
+    SYSTEM_PAUSED = payload.paused
+    return {"success": True, "paused": SYSTEM_PAUSED}
+
+@router.post("/admin/governance/user-status")
+def set_governance_user_status(payload: UserStatusPayload, db: Session = Depends(get_db)):
+    user_addr = payload.user.strip().lower()
+    if payload.deactivated:
+        DEACTIVATED_USERS.add(user_addr)
+    else:
+        DEACTIVATED_USERS.discard(user_addr)
+
+    user = db.query(UserDB).filter(UserDB.address == user_addr).first()
+    if user:
+        user.is_deactivated = payload.deactivated
+        db.commit()
+
+    return {"success": True, "user": user_addr, "deactivated": payload.deactivated}
+
+# ---------------------------------------------------------------------------
+# User Registry Endpoints
+# ---------------------------------------------------------------------------
+
+class UserResponse(BaseModel):
+    address: str
+    role: str
+    first_seen_at: int
+    last_seen_at: int
+    is_deactivated: bool
+
+class UserRegisterPayload(BaseModel):
+    address: str
+    role: str
+
+@router.post("/users/register", response_model=UserResponse)
+def register_user(payload: UserRegisterPayload, db: Session = Depends(get_db)):
+    addr = payload.address.strip().lower()
+    if not addr.startswith("0x") or len(addr) != 42:
+        raise HTTPException(status_code=400, detail="Invalid Ethereum address.")
+
+    role = payload.role.strip().lower()
+    if role not in ["buyer", "creator", "admin"]:
+        raise HTTPException(status_code=400, detail="Role must be buyer, creator, or admin.")
+
+    now_ms = int(time.time() * 1000)
+    user = db.query(UserDB).filter(UserDB.address == addr).first()
+
+    if not user:
+        user = UserDB(
+            address=addr,
+            role=role,
+            first_seen_at=now_ms,
+            last_seen_at=now_ms,
+            is_deactivated=False,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        act = ActivityDB(
+            id=f"user-{now_ms}-{addr[2:8]}",
+            type="UserRegistered",
+            user=addr,
+            model_name=f"Registered {role.capitalize()}",
+            model_id=0,
+            amount_eth="0",
+            timestamp=now_ms,
+            tx_hash=f"0x{addr[2:]}000000000000000000000000",
+            status="Confirmed"
+        )
+        db.add(act)
+        db.commit()
+    else:
+        user.role = role
+        user.last_seen_at = now_ms
+        db.commit()
+        db.refresh(user)
+
+    return UserResponse(
+        address=user.address,
+        role=user.role,
+        first_seen_at=user.first_seen_at,
+        last_seen_at=user.last_seen_at,
+        is_deactivated=user.is_deactivated or (user.address in DEACTIVATED_USERS),
+    )
+
+@router.get("/users", response_model=List[UserResponse])
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(UserDB).order_by(desc(UserDB.last_seen_at)).all()
+    return [
+        UserResponse(
+            address=u.address,
+            role=u.role,
+            first_seen_at=u.first_seen_at,
+            last_seen_at=u.last_seen_at,
+            is_deactivated=u.is_deactivated or (u.address.lower() in DEACTIVATED_USERS),
+        )
+        for u in users
+    ]
+
 # ---------------------------------------------------------------------------
 # Purchases / Licenses Endpoints
 # ---------------------------------------------------------------------------
@@ -257,7 +412,9 @@ def purchase_license(payload: LicenseCreate, db: Session = Depends(get_db)):
 
     now_ms = int(time.time() * 1000)
     issued_at = payload.issued_at or now_ms
-    expiry = payload.expiry or (issued_at + 30 * 24 * 60 * 60 * 1000)
+    is_full_ownership = payload.license_type == "full_ownership"
+    # Perpetual expiry for full ownership (100 years), otherwise 30 days
+    expiry = payload.expiry or (issued_at + ((100 * 365) if is_full_ownership else 30) * 24 * 60 * 60 * 1000)
 
     # 1. Create persistent license record
     new_license = LicenseDB(
@@ -271,6 +428,7 @@ def purchase_license(payload: LicenseCreate, db: Session = Depends(get_db)):
         price_eth=payload.price_eth or model.license_price_eth,
         transaction_hash=payload.transaction_hash,
         created_at=now_ms,
+        license_type="full_ownership" if is_full_ownership else "30_day_license",
     )
     db.add(new_license)
 
@@ -278,11 +436,13 @@ def purchase_license(payload: LicenseCreate, db: Session = Depends(get_db)):
     model.license_count = (model.license_count or 0) + 1
 
     # 3. Add to activity ledger
+    act_type = "ModelOwnershipPurchased" if is_full_ownership else "LicensePurchased"
+    act_desc = f"{model.name} (Full Model Ownership - ModelProof Verified™)" if is_full_ownership else model.name
     act = ActivityDB(
         id=f"tx-lic-{int(time.time())}-{os.urandom(4).hex()}",
-        type="LicensePurchased",
+        type=act_type,
         user=payload.licensee,
-        model_name=model.name,
+        model_name=act_desc,
         model_id=model.model_id,
         amount_eth=payload.price_eth or model.license_price_eth,
         timestamp=now_ms,

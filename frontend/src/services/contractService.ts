@@ -224,6 +224,87 @@ export async function executePurchaseLicenseOnChain({
 }
 
 /**
+ * Triggers a real MetaMask transaction prompt to purchase full, perpetual Model Ownership on-chain.
+ * Grants lifetime license, raw weights access, and ModelProof Verified status.
+ */
+export async function executePurchaseModelOwnershipOnChain({
+  modelId,
+  priceEth,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  modelId: number;
+  priceEth: string;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected. Please install the MetaMask extension.");
+  }
+
+  const deployed = await isContractDeployed(chainId);
+  if (!deployed) {
+    throw new Error(
+      `No smart contract is deployed at ${CONTRACT_ADDRESS} on this network.`
+    );
+  }
+
+  const existsOnChain = await isModelRegisteredOnChain(modelId, chainId);
+  if (!existsOnChain) {
+    throw new Error(`Model #${modelId} is not registered on the smart contract yet.`);
+  }
+
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) {
+    throw new Error("Could not initialize wallet client for MetaMask.");
+  }
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const valueWei = parseEther(priceEth);
+
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "purchaseModelOwnership",
+    args: [BigInt(modelId)],
+    value: valueWei,
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Checks if a specific buyer holds full model ownership on-chain.
+ */
+export async function readHasModelOwnershipOnChain(
+  modelId: number,
+  buyerAddress: string,
+  chainId?: number
+): Promise<boolean> {
+  try {
+    if (!buyerAddress || !buyerAddress.startsWith("0x")) return false;
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return false;
+    const publicClient = getPublicClient(chainId);
+    const hasOwnership = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "checkOwnership",
+      args: [BigInt(modelId), buyerAddress as Address],
+    });
+    return Boolean(hasOwnership);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Triggers a real MetaMask transaction prompt to withdraw creator earnings.
  */
 export async function executeWithdrawEarningsOnChain({
@@ -347,6 +428,8 @@ export async function executeSetPlatformFeeOnChain({
  */
 export async function readAdminAddressOnChain(chainId?: number): Promise<string> {
   try {
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return "";
     const publicClient = getPublicClient(chainId);
     const admin = await publicClient.readContract({
       address: CONTRACT_ADDRESS,
@@ -355,7 +438,6 @@ export async function readAdminAddressOnChain(chainId?: number): Promise<string>
     });
     return String(admin);
   } catch (e) {
-    console.warn("Could not read admin address from contract:", e);
     return "";
   }
 }
@@ -365,6 +447,8 @@ export async function readAdminAddressOnChain(chainId?: number): Promise<string>
  */
 export async function readPlatformFeeBpsOnChain(chainId?: number): Promise<number> {
   try {
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return 200;
     const publicClient = getPublicClient(chainId);
     const feeBps = await publicClient.readContract({
       address: CONTRACT_ADDRESS,
@@ -373,7 +457,6 @@ export async function readPlatformFeeBpsOnChain(chainId?: number): Promise<numbe
     });
     return Number(feeBps);
   } catch (e) {
-    console.warn("Could not read platform fee bps from contract:", e);
     return 200; // default 2%
   }
 }
@@ -439,6 +522,403 @@ export async function executeDirectTransfer98_2({
   await waitForTransactionSuccess(adminTxHash, chainId);
 
   return { creatorTxHash, adminTxHash };
+}
+
+// ---------------------------------------------------------------------------
+// On-Chain Emergency Governance & System Controls
+// ---------------------------------------------------------------------------
+
+/**
+ * Pauses all smart contract operations (registerModel, purchaseLicense, createModelVersion).
+ * Emergency circuit-breaker called by Admin/Owner in MetaMask.
+ */
+export async function executePauseContract({
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "pause",
+    args: [],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Resumes smart contract operations after emergency pause.
+ */
+export async function executeUnpauseContract({
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "unpause",
+    args: [],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Reads whether the contract is currently paused on-chain.
+ */
+export async function readIsContractPaused(chainId?: number): Promise<boolean> {
+  try {
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return false;
+    const publicClient = getPublicClient(chainId);
+    const isPaused = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "paused",
+    });
+    return Boolean(isPaused);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Registers a new buyer on-chain in Solidity via registerBuyer(address).
+ */
+export async function executeRegisterBuyerOnChain({
+  buyerAddress,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  buyerAddress: Address;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "registerBuyer",
+    args: [buyerAddress],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Registers a new creator on-chain in Solidity via registerCreator(address).
+ */
+export async function executeRegisterCreatorOnChain({
+  creatorAddress,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  creatorAddress: Address;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "registerCreator",
+    args: [creatorAddress],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Reads all registered buyers from the smart contract.
+ */
+export async function readAllBuyersOnChain(chainId?: number): Promise<string[]> {
+  try {
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return [];
+    const publicClient = getPublicClient(chainId);
+    const buyers = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "getAllBuyers",
+    });
+    return Array.isArray(buyers) ? (buyers as string[]) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Reads all registered creators from the smart contract.
+ */
+export async function readAllCreatorsOnChain(chainId?: number): Promise<string[]> {
+  try {
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return [];
+    const publicClient = getPublicClient(chainId);
+    const creators = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "getAllCreators",
+    });
+    return Array.isArray(creators) ? (creators as string[]) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Deactivates/blacklists a user address (creator or buyer) on-chain in Solidity.
+ */
+export async function executeDeactivateUserOnChain({
+  userAddress,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  userAddress: Address;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "deactivateUser",
+    args: [userAddress],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Reactivates a user address (creator or buyer) on-chain in Solidity.
+ */
+export async function executeReactivateUserOnChain({
+  userAddress,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  userAddress: Address;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "reactivateUser",
+    args: [userAddress],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Checks whether a user address is deactivated on-chain.
+ */
+export async function readIsUserDeactivatedOnChain(
+  userAddress: string,
+  chainId?: number
+): Promise<boolean> {
+  try {
+    if (!userAddress || !userAddress.startsWith("0x")) return false;
+    const deployed = await isContractDeployed(chainId);
+    if (!deployed) return false;
+    const publicClient = getPublicClient(chainId);
+    const deactivated = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "isUserDeactivated",
+      args: [userAddress as Address],
+    });
+    return Boolean(deactivated);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Permanently deletes / marks a model inactive on-chain via Solidity deleteModel.
+ */
+export async function executeDeleteModelOnChain({
+  modelId,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  modelId: number;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "deleteModel",
+    args: [BigInt(modelId)],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Deactivates a model on-chain via Solidity deactivateModel.
+ */
+export async function executeDeactivateModelOnChain({
+  modelId,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  modelId: number;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "deactivateModel",
+    args: [BigInt(modelId)],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
+}
+
+/**
+ * Reactivates a model on-chain via Solidity reactivateModel.
+ */
+export async function executeReactivateModelOnChain({
+  modelId,
+  account,
+  chainId = 31337,
+  onTxSubmitted,
+}: {
+  modelId: number;
+  account: Address;
+  chainId?: number;
+  onTxSubmitted?: (hash: Hash) => void;
+}): Promise<Hash> {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("MetaMask is not detected.");
+  }
+  const walletClient = getWalletClient(account, chainId);
+  if (!walletClient) throw new Error("Could not initialize wallet client.");
+
+  const chain = chainId === 11155111 ? sepolia : hardhat;
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "reactivateModel",
+    args: [BigInt(modelId)],
+    account,
+    chain,
+  });
+
+  onTxSubmitted?.(hash);
+  await waitForTransactionSuccess(hash, chainId);
+  return hash;
 }
 
 export { parseEther, formatEther };

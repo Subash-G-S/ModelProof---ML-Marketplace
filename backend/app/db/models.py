@@ -41,6 +41,7 @@ class LicenseDB(Base):
     price_eth = Column(String(32), nullable=False)
     transaction_hash = Column(String(66), nullable=False)
     created_at = Column(BigInteger, nullable=False)
+    license_type = Column(String(32), default="30_day_license", nullable=True)
 
     model = relationship("ModelDB", back_populates="licenses")
 
@@ -70,3 +71,12 @@ class ArtifactDB(Base):
     model_type = Column(String(64), nullable=True)
     uploaded_at = Column(BigInteger, nullable=False)
     uploaded_by = Column(String(42), nullable=True)
+
+class UserDB(Base):
+    __tablename__ = "users"
+
+    address = Column(String(42), primary_key=True, index=True)
+    role = Column(String(32), default="buyer", nullable=False) # buyer, creator, admin
+    first_seen_at = Column(BigInteger, nullable=False)
+    last_seen_at = Column(BigInteger, nullable=False)
+    is_deactivated = Column(Boolean, default=False, nullable=False)

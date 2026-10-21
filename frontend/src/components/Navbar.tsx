@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Activity,
   BarChart3,
-  Scale,
 } from "lucide-react";
 import { ThreeAccountModal } from "./ThreeAccountModal";
 
@@ -64,7 +63,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
       : []),
     ...(role === "admin" ? [{ label: "Protocol Governance", path: "/admin" }] : []),
     { label: "Verify", path: "/verify" },
-    { label: "Compare", path: "/compare" },
     { label: "Analytics", path: "/analytics" },
   ];
 

@@ -4,7 +4,7 @@ import time
 import shutil
 from sqlalchemy.orm import Session
 from .database import engine, SessionLocal, Base, BASE_DIR
-from .models import ModelDB, LicenseDB, ActivityDB, ArtifactDB
+from .models import ModelDB, LicenseDB, ActivityDB, ArtifactDB, UserDB
 
 STORAGE_DIR = os.path.join(BASE_DIR, "storage", "models")
 ML_MODELS_DIR = os.path.join(os.path.dirname(BASE_DIR), "ml", "models")
@@ -12,6 +12,7 @@ METADATA_FILE = os.path.join(ML_MODELS_DIR, "models_metadata.json")
 
 DEMO_CREATOR = "0x24522a62C4aa130225D415Ee2b222fd473E90B83"
 DEMO_BUYER = "0x022B8D7378982E11AF76Ad351C58D71501c15A60"
+DEMO_ADMIN = "0x740576446aF2EC9F567729073bbE0e4522e3E878"
 
 def init_db():
     # 1. Create tables
@@ -195,6 +196,19 @@ def init_db():
                 ),
             ]
             db.add_all(acts)
+            db.commit()
+
+        # Seed initial users if empty
+        user_count = db.query(UserDB).count()
+        if user_count == 0:
+            print("[DB] Seeding initial users table...")
+            now_ms = int(time.time() * 1000)
+            initial_users = [
+                UserDB(address=DEMO_CREATOR.lower(), role="creator", first_seen_at=now_ms, last_seen_at=now_ms, is_deactivated=False),
+                UserDB(address=DEMO_BUYER.lower(), role="buyer", first_seen_at=now_ms, last_seen_at=now_ms, is_deactivated=False),
+                UserDB(address=DEMO_ADMIN.lower(), role="admin", first_seen_at=now_ms, last_seen_at=now_ms, is_deactivated=False),
+            ]
+            db.add_all(initial_users)
             db.commit()
 
     except Exception as e:

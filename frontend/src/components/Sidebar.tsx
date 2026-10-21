@@ -6,7 +6,6 @@ import {
   PlusCircle,
   FileCheck2,
   ShieldCheck,
-  Scale,
   Activity,
   BarChart3,
   ExternalLink,
@@ -36,7 +35,6 @@ export const Sidebar: React.FC = () => {
           { to: "/dashboard", label: "Creator Studio", icon: LayoutDashboard, badge: "98% Split", badgeColor: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
           { to: "/register", label: "Register AI Model", icon: PlusCircle, badge: "Anchor", badgeColor: "bg-mp-accent/15 text-mp-accent-light border-mp-accent/30" },
           { to: "/verify", label: "Verify Integrity", icon: ShieldCheck },
-          { to: "/compare", label: "Compare Models", icon: Scale },
           { to: "/analytics", label: "Creator Analytics", icon: BarChart3 },
           { to: "/activity", label: "Blockchain Activity", icon: Activity },
         ];
@@ -45,7 +43,6 @@ export const Sidebar: React.FC = () => {
           { to: "/marketplace", label: "Marketplace", icon: Store, badge: "Browse", badgeColor: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
           { to: "/licenses", label: "My Licenses", icon: FileCheck2, badge: "30-Day", badgeColor: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
           { to: "/verify", label: "Verify Model Hash", icon: ShieldCheck },
-          { to: "/compare", label: "Compare Models", icon: Scale },
           { to: "/activity", label: "Blockchain Activity", icon: Activity },
         ];
       case "admin":

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useModels } from "../context/ModelContext";
+import { useWallet } from "../context/WalletContext";
 import { computeClientSha256 } from "../services/apiService";
 import {
   ShieldCheck,
@@ -14,13 +15,16 @@ import {
   KeyRound,
   ExternalLink,
   Info,
+  Sparkles,
+  Award,
 } from "lucide-react";
 
 export const VerifyModel: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialModelId = searchParams.get("modelId");
 
-  const { models } = useModels();
+  const { models, hasFullOwnership } = useModels();
+  const { address } = useWallet();
   const [selectedModelId, setSelectedModelId] = useState<number | "auto">(
     initialModelId ? Number(initialModelId) : "auto"
   );
@@ -124,7 +128,7 @@ export const VerifyModel: React.FC = () => {
       {/* Target Model Selector */}
       <div className="rounded-2xl border border-mp-border bg-mp-surface p-5 space-y-3">
         <label className="text-xs font-semibold text-white">
-          Compare Against Blockchain Registry:
+          Select Model in Blockchain Registry:
         </label>
         <select
           value={selectedModelId}
@@ -209,50 +213,119 @@ export const VerifyModel: React.FC = () => {
         </div>
       )}
 
-      {verifyState === "matched" && matchedModel && (
-        <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-950/20 p-6 sm:p-8 space-y-6 shadow-xl shadow-emerald-500/5 animate-in fade-in duration-300">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="h-7 w-7" />
-            </div>
-            <div>
-              <span className="text-xs uppercase tracking-wider font-bold text-emerald-400">
-                VERIFIED MODEL
-              </span>
-              <h2 className="text-2xl font-extrabold text-white">
-                ✓ ORIGINAL FILE MATCH
-              </h2>
-            </div>
-          </div>
+      {verifyState === "matched" && matchedModel && (() => {
+        const isOwner = address ? hasFullOwnership(matchedModel.modelId, address) : false;
 
-          <div className="grid sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-mp-bg/80 border border-mp-border space-y-1">
-              <div className="text-mp-text-dim">Model Name</div>
-              <div className="text-white font-bold text-sm">{matchedModel.name}</div>
-            </div>
-            <div className="p-3.5 rounded-xl bg-mp-bg/80 border border-mp-border space-y-1">
-              <div className="text-mp-text-dim">Registered Version</div>
-              <div className="text-white font-bold text-sm">{matchedModel.version}</div>
-            </div>
-          </div>
+        return (
+          <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-b from-emerald-950/30 via-mp-surface to-mp-surface p-6 sm:p-8 space-y-6 shadow-2xl shadow-emerald-500/10 animate-in fade-in duration-300">
+            {/* ModelProof Verified Top Seal */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-emerald-500/30">
+              <div className="flex items-center gap-3.5">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      <Sparkles className="h-3 w-3 text-amber-300" />
+                      <span>ModelProof Verified™ Model</span>
+                    </span>
+                    <span className="text-xs font-mono text-emerald-400/80">
+                      Registry ID #{matchedModel.modelId}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                    ✓ Original Artifact Authenticated
+                  </h2>
+                </div>
+              </div>
 
-          <div className="space-y-3 text-xs">
-            <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1 font-mono">
-              <div className="text-mp-text-dim">Uploaded File SHA-256:</div>
-              <div className="text-emerald-400 break-all">{uploadedHash}</div>
+              <div className="text-right self-start sm:self-auto">
+                <span className="inline-block text-[10px] font-mono uppercase px-2.5 py-1 rounded bg-mp-bg border border-mp-border text-mp-accent-light">
+                  Ethereum Sepolia Verified
+                </span>
+              </div>
             </div>
-            <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1 font-mono">
-              <div className="text-mp-text-dim">Blockchain Anchored SHA-256:</div>
-              <div className="text-emerald-400 break-all">{matchedModel.modelHash}</div>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
-            <ShieldCheck className="h-4 w-4" />
-            <span>The uploaded weights file exactly matches the immutable on-chain fingerprint. No tampering detected.</span>
+            {/* Verification Metadata Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1">
+                <div className="text-mp-text-dim">Model Name</div>
+                <div className="text-white font-bold text-sm truncate">{matchedModel.name}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1">
+                <div className="text-mp-text-dim">Framework & Type</div>
+                <div className="text-white font-bold text-sm">{matchedModel.framework} • {matchedModel.modelType}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1">
+                <div className="text-mp-text-dim">Registered Version</div>
+                <div className="text-white font-bold text-sm">{matchedModel.version}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1">
+                <div className="text-mp-text-dim">Creator Address</div>
+                <div className="text-white font-mono font-bold text-xs truncate" title={matchedModel.creator}>
+                  {matchedModel.creator.slice(0, 6)}...{matchedModel.creator.slice(-4)}
+                </div>
+              </div>
+            </div>
+
+            {/* Cryptographic Hash Comparison */}
+            <div className="space-y-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1 font-mono">
+                <div className="text-mp-text-dim">Uploaded Model Artifact SHA-256:</div>
+                <div className="text-emerald-400 break-all font-bold">{uploadedHash}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-mp-bg border border-mp-border space-y-1 font-mono">
+                <div className="text-mp-text-dim">Smart Contract Anchored SHA-256:</div>
+                <div className="text-emerald-400 break-all font-bold">{matchedModel.modelHash}</div>
+              </div>
+            </div>
+
+            {/* Model Ownership Status Card */}
+            {isOwner ? (
+              <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                    <Award className="h-4 w-4 text-amber-400" />
+                    <span>★ ModelProof Verified™ Full Ownership Acquired</span>
+                  </div>
+                  <p className="text-[11px] text-mp-text-muted">
+                    Your connected wallet holds full on-chain ownership certificate and unrestricted rights for this model.
+                  </p>
+                </div>
+                <a
+                  href={`http://localhost:8000/api/models/${matchedModel.modelId}/download?licensee=${address}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all shrink-0"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download Verified Weights</span>
+                </a>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-mp-border bg-mp-bg/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="space-y-1">
+                  <div className="text-white font-semibold flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    <span>Integrity Guaranteed: ModelProof Verified™ Benchmark</span>
+                  </div>
+                  <p className="text-[11px] text-mp-text-muted">
+                    The artifact strictly matches the original weights published by creator. To acquire full ownership rights and download offline weights, visit the model page.
+                  </p>
+                </div>
+                <Link
+                  to={`/model/${matchedModel.modelId}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-mp-surface-2 hover:bg-mp-surface border border-mp-border text-white text-xs font-semibold transition-all shrink-0"
+                >
+                  <span>View Model & Buy Options</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {verifyState === "mismatch" && (
         <div className="rounded-2xl border-2 border-red-500/40 bg-red-950/20 p-6 sm:p-8 space-y-6 shadow-xl shadow-red-500/5 animate-in fade-in duration-300">

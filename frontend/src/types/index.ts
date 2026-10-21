@@ -46,11 +46,12 @@ export interface LicenseRecord {
   active: boolean;
   priceEth: string;
   transactionHash: string;
+  licenseType?: "30_day_license" | "full_ownership";
 }
 
 export interface ActivityEvent {
   id: string;
-  type: "ModelRegistered" | "LicensePurchased" | "VersionCreated" | "LicenseRevoked" | "PaymentWithdrawn";
+  type: "ModelRegistered" | "LicensePurchased" | "ModelOwnershipPurchased" | "VersionCreated" | "LicenseRevoked" | "PaymentWithdrawn";
   user: string;
   modelName?: string;
   modelId?: number;

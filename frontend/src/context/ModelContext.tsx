@@ -4,6 +4,7 @@ import { useWallet } from "./WalletContext";
 import {
   executeRegisterModelOnChain,
   executePurchaseLicenseOnChain,
+  executePurchaseModelOwnershipOnChain,
   executeWithdrawEarningsOnChain,
   executeDirectTransfer98_2,
   isContractDeployed,
@@ -32,12 +33,19 @@ interface ModelContextType {
     modelId: number,
     onStatusUpdate?: (status: string, txHash?: string) => void
   ) => Promise<{ success: boolean; txHash: string; licenseId: number }>;
+  purchaseModelOwnership: (
+    modelId: number,
+    onStatusUpdate?: (status: string, txHash?: string) => void
+  ) => Promise<{ success: boolean; txHash: string; licenseId: number }>;
   revokeLicense: (licenseId: number) => Promise<boolean>;
   deactivateModel: (modelId: number) => Promise<boolean>;
   reactivateModel: (modelId: number) => Promise<boolean>;
+  deleteModel: (modelId: number) => Promise<boolean>;
+  refreshModels: () => Promise<void>;
   verifyModelHash: (modelId: number, hash: string) => boolean;
   findModelByHash: (hash: string) => ModelRecord | undefined;
   hasActiveLicense: (modelId: number, userAddress: string) => boolean;
+  hasFullOwnership: (modelId: number, userAddress: string) => boolean;
   withdrawEarnings: () => Promise<{ success: boolean; amount: string; txHash: string }>;
 }
 
@@ -524,6 +532,156 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return { success: true, txHash, licenseId: newLicenseId };
   };
 
+  const purchaseModelOwnership = async (
+    modelId: number,
+    onStatusUpdate?: (status: string, txHash?: string) => void
+  ) => {
+    const model = models.find((m) => m.modelId === modelId);
+    if (!model) throw new Error("Model not found");
+
+    if (!address) {
+      throw new Error("Please connect your MetaMask wallet first.");
+    }
+
+    const hasConfiguredCreator = Boolean(
+      configuredAccounts?.creator &&
+      configuredAccounts.creator.startsWith("0x") &&
+      configuredAccounts.creator.length === 42
+    );
+
+    const hasConfiguredAdmin = Boolean(
+      configuredAccounts?.admin &&
+      configuredAccounts.admin.startsWith("0x") &&
+      configuredAccounts.admin.length === 42
+    );
+
+    const creatorRecipient = hasConfiguredCreator
+      ? configuredAccounts.creator
+      : model.creator;
+
+    const adminRecipient = hasConfiguredAdmin
+      ? configuredAccounts.admin
+      : "";
+
+    if (creatorRecipient && creatorRecipient.toLowerCase() === address.toLowerCase()) {
+      throw new Error("You cannot purchase ownership for your own model.");
+    }
+
+    // Full model buyout price is 3x standard 30-day license
+    const fullPriceEth = (parseFloat(model.licensePriceEth) * 3).toFixed(4);
+    let txHash: string = "";
+
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      const modelOnChain = await isModelRegisteredOnChain(modelId, chainId);
+
+      if (modelOnChain && !hasConfiguredCreator && !hasConfiguredAdmin) {
+        try {
+          onStatusUpdate?.("Please approve Full Model Ownership purchase (3x) in MetaMask...");
+          txHash = await executePurchaseModelOwnershipOnChain({
+            modelId,
+            priceEth: fullPriceEth,
+            account: address as Address,
+            chainId,
+            onTxSubmitted: (hash) => {
+              onStatusUpdate?.("Ownership purchase transaction submitted. Awaiting block receipt...", hash);
+            },
+          });
+        } catch (err: any) {
+          if (err.code === 4001 || err.message?.includes("rejected")) {
+            throw new Error("Transaction rejected by user in MetaMask.");
+          }
+          throw new Error(err.shortMessage || err.message || "MetaMask payment failed.");
+        }
+      } else {
+        if (!hasConfiguredCreator || !hasConfiguredAdmin) {
+          throw new Error("Recipient accounts are not configured. Please check '3 Wallets' configuration.");
+        }
+
+        try {
+          onStatusUpdate?.(`Approving 98% Creator and 2% Admin full ownership payment (${fullPriceEth} ETH)...`);
+          const direct = await executeDirectTransfer98_2({
+            buyerAccount: address,
+            creatorAccount: creatorRecipient,
+            adminAccount: adminRecipient,
+            priceEth: fullPriceEth,
+            chainId,
+            onStatusUpdate,
+          });
+          txHash = direct.creatorTxHash;
+        } catch (directErr: any) {
+          if (directErr.code === 4001 || directErr.message?.includes("rejected")) {
+            throw new Error("Transaction rejected by user in MetaMask.");
+          }
+        }
+      }
+    } else {
+      txHash = generateFallbackTxHash();
+    }
+
+    // 100 years perpetual lifetime
+    const perpetualExpiry = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
+
+    const savedLicense = await savePurchaseToDb({
+      modelId,
+      modelName: model.name,
+      creator: creatorRecipient,
+      licensee: address,
+      priceEth: fullPriceEth,
+      transactionHash: txHash,
+      issuedAt: Date.now(),
+      expiry: perpetualExpiry,
+      licenseType: "full_ownership",
+    });
+
+    const newLicenseId = savedLicense ? savedLicense.licenseId : licenses.length + 1;
+    const newLicense: LicenseRecord = savedLicense || {
+      licenseId: newLicenseId,
+      modelId,
+      modelName: model.name,
+      creator: creatorRecipient,
+      licensee: address,
+      issuedAt: Date.now(),
+      expiry: perpetualExpiry,
+      active: true,
+      priceEth: fullPriceEth,
+      transactionHash: txHash,
+      licenseType: "full_ownership",
+    };
+
+    setLicenses((prev) => [newLicense, ...prev]);
+
+    setModels((prev) =>
+      prev.map((m) =>
+        m.modelId === modelId ? { ...m, licenseCount: (m.licenseCount || 0) + 1 } : m
+      )
+    );
+
+    setActivities((prev) => [
+      {
+        id: `tx-${Date.now()}`,
+        type: "ModelOwnershipPurchased",
+        user: address,
+        modelName: `${model.name} (ModelProof Verified™ Full Ownership)`,
+        modelId,
+        amountEth: fullPriceEth,
+        timestamp: Date.now(),
+        txHash,
+        status: "Confirmed",
+      },
+      ...prev,
+    ]);
+
+    try {
+      await refreshBalances();
+      setTimeout(() => { refreshBalances().catch(() => {}); }, 2500);
+      setTimeout(() => { refreshBalances().catch(() => {}); }, 6000);
+    } catch (e) {
+      console.warn("Could not refresh balances:", e);
+    }
+
+    return { success: true, txHash, licenseId: newLicenseId };
+  };
+
   const revokeLicense = async (licenseId: number) => {
     setLicenses((prev) =>
       prev.map((l) => (l.licenseId === licenseId ? { ...l, active: false } : l))
@@ -545,6 +703,22 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return true;
   };
 
+  const deleteModel = async (modelId: number) => {
+    setModels((prev) => prev.filter((m) => m.modelId !== modelId));
+    return true;
+  };
+
+  const refreshModels = async () => {
+    try {
+      const dbModels = await fetchModelsFromDb();
+      if (dbModels && dbModels.length > 0) {
+        setModels(dbModels);
+      }
+    } catch (e) {
+      console.warn("Could not reload models from DB:", e);
+    }
+  };
+
   const verifyModelHash = (modelId: number, hash: string) => {
     const model = models.find((m) => m.modelId === modelId);
     if (!model) return false;
@@ -562,6 +736,16 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         l.licensee.toLowerCase() === userAddress.toLowerCase() &&
         l.active &&
         Date.now() < l.expiry
+    );
+  };
+
+  const hasFullOwnership = (modelId: number, userAddress: string) => {
+    return licenses.some(
+      (l) =>
+        l.modelId === modelId &&
+        l.licensee.toLowerCase() === userAddress.toLowerCase() &&
+        l.active &&
+        l.licenseType === "full_ownership"
     );
   };
 
@@ -610,12 +794,16 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         registerModel,
         createModelVersion,
         purchaseLicense,
+        purchaseModelOwnership,
         revokeLicense,
         deactivateModel,
         reactivateModel,
+        deleteModel,
+        refreshModels,
         verifyModelHash,
         findModelByHash,
         hasActiveLicense,
+        hasFullOwnership,
         withdrawEarnings,
       }}
     >

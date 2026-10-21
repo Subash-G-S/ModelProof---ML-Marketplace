@@ -14,7 +14,6 @@ import { RegisterModel } from "./pages/RegisterModel";
 import { CreatorDashboard } from "./pages/CreatorDashboard";
 import { BuyerDashboard } from "./pages/BuyerDashboard";
 import { VerifyModel } from "./pages/VerifyModel";
-import { CompareModels } from "./pages/CompareModels";
 import { Activity } from "./pages/Activity";
 import { Analytics } from "./pages/Analytics";
 import { AdminDashboard } from "./pages/AdminDashboard";
@@ -75,7 +74,6 @@ function App() {
 
                   {/* Shared Platform Routes */}
                   <Route path="/verify" element={<VerifyModel />} />
-                  <Route path="/compare" element={<CompareModels />} />
                   <Route path="/activity" element={<Activity />} />
                   <Route path="/analytics" element={<Analytics />} />
                 </Routes>

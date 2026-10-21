@@ -62,6 +62,7 @@ class LicenseCreate(BaseModel):
     transaction_hash: str
     issued_at: Optional[int] = None
     expiry: Optional[int] = None
+    license_type: Optional[str] = "30_day_license"
 
 class LicenseResponse(BaseModel):
     license_id: int
@@ -75,6 +76,7 @@ class LicenseResponse(BaseModel):
     price_eth: str
     transaction_hash: str
     created_at: int
+    license_type: Optional[str] = "30_day_license"
 
 # --- Activity Schemas ---
 

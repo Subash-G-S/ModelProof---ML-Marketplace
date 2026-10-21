@@ -170,13 +170,30 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setAddress(currentAcc);
           setIsConnected(true);
 
-          // Auto-detect role matching configured accounts
-          if (configuredAccounts.buyer && currentAcc.toLowerCase() === configuredAccounts.buyer.toLowerCase()) {
+          // Auto-detect role matching configured accounts or registered users
+          const cleanAcc = currentAcc.toLowerCase();
+          if (cleanAcc === "0x022b8d7378982e11af76ad351c58d71501c15a60".toLowerCase()) {
             setRole("buyer");
-          } else if (configuredAccounts.creator && currentAcc.toLowerCase() === configuredAccounts.creator.toLowerCase()) {
-            setRole("creator");
-          } else if (configuredAccounts.admin && currentAcc.toLowerCase() === configuredAccounts.admin.toLowerCase()) {
+          } else if (cleanAcc === "0x740576446af2ec9f567729073bbe0e4522e3e878".toLowerCase() || (configuredAccounts.admin && cleanAcc === configuredAccounts.admin.toLowerCase())) {
             setRole("admin");
+          } else if (cleanAcc === "0x24522a62c4aa130225d415ee2b222fd473e90b83".toLowerCase() || (configuredAccounts.creator && cleanAcc === configuredAccounts.creator.toLowerCase())) {
+            setRole("creator");
+          } else if (configuredAccounts.buyer && cleanAcc === configuredAccounts.buyer.toLowerCase()) {
+            setRole("buyer");
+          } else {
+            // Check registered users from backend DB
+            fetch("http://localhost:8000/api/users", { signal: AbortSignal.timeout(2000) })
+              .then((res) => (res.ok ? res.json() : []))
+              .then((users: any[]) => {
+                const found = users.find((u) => u.address.toLowerCase() === cleanAcc);
+                if (found && (found.role === "buyer" || found.role === "creator" || found.role === "admin")) {
+                  setRole(found.role);
+                } else {
+                  // Default new unassigned account to buyer
+                  setRole("buyer");
+                }
+              })
+              .catch(() => setRole("buyer"));
           }
         }
       } catch (err) {
@@ -189,13 +206,30 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setAddress(newAcc);
           setIsConnected(true);
 
-          // Auto-switch role if matching one of the 3 accounts
-          if (configuredAccounts.buyer && newAcc.toLowerCase() === configuredAccounts.buyer.toLowerCase()) {
+          const cleanNew = newAcc.toLowerCase();
+          // Auto-switch role if matching one of the configured accounts
+          if (cleanNew === "0x022b8d7378982e11af76ad351c58d71501c15a60".toLowerCase()) {
             setRole("buyer");
-          } else if (configuredAccounts.creator && newAcc.toLowerCase() === configuredAccounts.creator.toLowerCase()) {
-            setRole("creator");
-          } else if (configuredAccounts.admin && newAcc.toLowerCase() === configuredAccounts.admin.toLowerCase()) {
+          } else if (cleanNew === "0x740576446af2ec9f567729073bbe0e4522e3e878".toLowerCase() || (configuredAccounts.admin && cleanNew === configuredAccounts.admin.toLowerCase())) {
             setRole("admin");
+          } else if (cleanNew === "0x24522a62c4aa130225d415ee2b222fd473e90b83".toLowerCase() || (configuredAccounts.creator && cleanNew === configuredAccounts.creator.toLowerCase())) {
+            setRole("creator");
+          } else if (configuredAccounts.buyer && cleanNew === configuredAccounts.buyer.toLowerCase()) {
+            setRole("buyer");
+          } else {
+            // Check registered users from backend DB
+            fetch("http://localhost:8000/api/users", { signal: AbortSignal.timeout(2000) })
+              .then((res) => (res.ok ? res.json() : []))
+              .then((users: any[]) => {
+                const found = users.find((u) => u.address.toLowerCase() === cleanNew);
+                if (found && (found.role === "buyer" || found.role === "creator" || found.role === "admin")) {
+                  setRole(found.role);
+                } else {
+                  // Default newly switched buyer account to buyer
+                  setRole("buyer");
+                }
+              })
+              .catch(() => setRole("buyer"));
           }
         } else {
           setAddress(null);

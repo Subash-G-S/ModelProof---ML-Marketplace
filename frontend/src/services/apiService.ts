@@ -241,6 +241,7 @@ export async function fetchLicensesFromDb(licensee?: string): Promise<any[]> {
         active: l.active,
         priceEth: l.price_eth,
         transactionHash: l.transaction_hash,
+        licenseType: l.license_type || "30_day_license",
       }));
     }
   } catch (e) {
@@ -258,6 +259,7 @@ export async function savePurchaseToDb(purchase: {
   transactionHash: string;
   issuedAt?: number;
   expiry?: number;
+  licenseType?: "30_day_license" | "full_ownership";
 }): Promise<any | null> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/licenses`, {
@@ -272,6 +274,7 @@ export async function savePurchaseToDb(purchase: {
         transaction_hash: purchase.transactionHash,
         issued_at: purchase.issuedAt,
         expiry: purchase.expiry,
+        license_type: purchase.licenseType || "30_day_license",
       }),
     });
     if (res.ok) {
@@ -287,6 +290,7 @@ export async function savePurchaseToDb(purchase: {
         active: l.active,
         priceEth: l.price_eth,
         transactionHash: l.transaction_hash,
+        licenseType: l.license_type || "30_day_license",
       };
     }
   } catch (e) {
@@ -430,6 +434,126 @@ export async function runModelInference(
   } catch (e: any) {
     return { success: false, error: e.message || "Failed to reach inference engine" };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Model & Governance Database Sync Methods
+// ---------------------------------------------------------------------------
+
+export async function deleteModelInDb(modelId: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/models/${modelId}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Failed to delete model in DB:", e);
+    return false;
+  }
+}
+
+export async function deactivateModelInDb(modelId: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/models/${modelId}/deactivate`, {
+      method: "POST",
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Failed to deactivate model in DB:", e);
+    return false;
+  }
+}
+
+export async function reactivateModelInDb(modelId: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/models/${modelId}/reactivate`, {
+      method: "POST",
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Failed to reactivate model in DB:", e);
+    return false;
+  }
+}
+
+export async function fetchGovernanceStatusFromDb(): Promise<{
+  paused: boolean;
+  deactivated_users: string[];
+}> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/governance`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return { paused: false, deactivated_users: [] };
+}
+
+export async function updateGovernancePauseInDb(paused: boolean): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/governance/pause`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paused }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateUserStatusInDb(user: string, deactivated: boolean): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/governance/user-status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user, deactivated }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+
+export async function registerUserInDb(
+  address: string,
+  role: "buyer" | "creator"
+): Promise<{ address: string; role: string; first_seen_at: number; last_seen_at: number; is_deactivated: boolean } | null> {
+  try {
+    if (!address || !address.startsWith("0x")) return null;
+    const res = await fetch(`${BACKEND_URL}/api/users/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, role }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn("Failed to register user in backend database:", e);
+  }
+  return null;
+}
+
+export async function fetchAllUsersFromDb(): Promise<{
+  address: string;
+  role: string;
+  first_seen_at: number;
+  last_seen_at: number;
+  is_deactivated: boolean;
+}[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/users`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return [];
 }
 
 
