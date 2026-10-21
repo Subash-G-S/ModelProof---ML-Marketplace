@@ -1,0 +1,455 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- Essential Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{setspace}
+
+\onehalfspacing
+
+% --- Colors ---
+\definecolor{primaryblue}{RGB}{30, 64, 175}
+\definecolor{accentgreen}{RGB}{16, 185, 129}
+\definecolor{codebg}{RGB}{248, 250, 252}
+\definecolor{commentgreen}{RGB}{34, 139, 34}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=accentgreen
+}
+
+% --- Code Listing Setup ---
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{commentgreen},
+    keywordstyle=\color{primaryblue}\bfseries,
+    stringstyle=\color{accentgreen},
+    frame=single,
+    rulecolor=\color{black!15},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2
+}
+
+% --- Running Header & Footer (Appears from Page 2 onwards) ---
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small \textbf{ModelProof} --- Blockchain Project Report (Semester 5)}
+\rhead{\small Page \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ==============================================================================
+% DOCUMENT BEGINS
+% ==============================================================================
+\begin{document}
+
+% ==============================================================================
+% COVER PAGE (STANDALONE)
+% ==============================================================================
+\begin{titlepage}
+    \thispagestyle{empty}
+    \centering
+    
+    \vspace*{0.5cm}
+    
+    {\Large \bfseries DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING \par}
+    \vspace{0.4cm}
+    {\large \textbf{B.Tech Computer Science and Engineering} \par}
+    
+    \vspace{1.8cm}
+    
+    \rule{\linewidth}{1.2pt} \\[0.4cm]
+    {\Huge \bfseries MODELPROOF \par}
+    \vspace{0.3cm}
+    {\Large \textbf{A Decentralized Marketplace and Cryptographic Provenance Platform for AI/ML Models using Ethereum, Hardhat, and FastAPI} \par}
+    \rule{\linewidth}{1.2pt}
+    
+    \vspace{1.8cm}
+    
+    {\large \textbf{A Project Report Submitted for} \par}
+    \vspace{0.2cm}
+    {\Large \bfseries BLOCKCHAIN PROJECT \par}
+    \vspace{0.3cm}
+    {\large \textbf{Semester 5} \par}
+    
+    \vspace{2.2cm}
+    
+    {\large \textbf{Submitted by:} \par}
+    \vspace{0.4cm}
+    
+    \begin{table}[H]
+        \centering
+        \large
+        \renewcommand{\arraystretch}{1.3}
+        \begin{tabular}{ll}
+            \textbf{G S Subash Chandra Bose} & \textbf{Roll No:} CB.SC.U4CSE24117 \\
+            \textbf{Rohan Vinod Kumar}       & \textbf{Roll No:} CB.SC.U4CSE24646 \\
+        \end{tabular}
+    \end{table}
+    
+    \vfill
+    
+    {\large \textbf{Academic Year 2026 -- 2027} \par}
+    \vspace{0.5cm}
+\end{titlepage}
+
+% ==============================================================================
+% PAGE 2: ABSTRACT & REPOSITORY
+% ==============================================================================
+\newpage
+\setcounter{page}{2}
+
+\begin{abstract}
+The dissemination and commercial distribution of trained Machine Learning (ML) models face severe challenges regarding intellectual property theft, unauthorized model weights alteration, opaque training lineage, and exorbitant 30\% marketplace take-rates. \textbf{ModelProof} resolves these issues by anchoring machine learning model weights directly to the \textbf{Ethereum Sepolia} blockchain through SHA-256 cryptographic hashes and IPFS content identifiers. 
+
+Developed and tested using the \textbf{Hardhat} smart contract development framework, the platform features:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Autonomous 98/2 Royalty Settlement:} 98\% of licensing revenue routes directly to the ML Creator's MetaMask wallet, while 2\% is retained for protocol governance.
+    \item \textbf{Dual-Tier Purchase Paradigm:} A 30-day time-limited DRM license for real-time hosted inference versus a permanent ``ModelProof Verified\texttrademark'' full buyout conferring physical weight downloads (\texttt{.joblib}) and an on-chain ownership certificate.
+    \item \textbf{MetaMask Wallet Integration:} Reactive Web3 connection, gas fee estimation, and role-based access for Buyers, Creators, and Platform Administrators.
+    \item \textbf{Emergency Circuit Breaker:} Synchronized pause/unpause functionality across Solidity smart contracts, Python FastAPI backend, and React UI to protect against exploits.
+\end{enumerate}
+
+\vspace{0.5cm}
+\textbf{Keywords:} Ethereum, Smart Contracts, Solidity, Hardhat, MetaMask, Machine Learning Provenance, SHA-256, Decentralized Marketplace.
+\end{abstract}
+
+\vspace{0.8cm}
+\hrule
+\vspace{0.4cm}
+\noindent \textbf{GitHub Project Repository:} \\
+\url{https://github.com/Subash-G-S/ModelProof---ML-Marketplace}
+
+\vspace{0.3cm}
+\noindent \textbf{Deployed Smart Contract Address (Ethereum Sepolia):} \\
+\texttt{0x0F8C7b9666E3A9d997813aF106D53A0423c52a0d}
+\vspace{0.4cm}
+\hrule
+
+\newpage
+\tableofcontents
+\newpage
+
+% ==============================================================================
+% SECTION 1: INTRODUCTION & PROBLEM DEFINITION
+% ==============================================================================
+\section{Introduction \& Problem Definition}
+
+\subsection{Background}
+Artificial Intelligence and Machine Learning models have become critical enterprise assets. Training state-of-the-art architectures (such as XGBoost, Deep Neural Networks, and Transformers) requires substantial capital, proprietary datasets, and extensive compute resources. However, once serialized into weight artifacts (\texttt{.joblib}, \texttt{.onnx}, \texttt{.pt}), models can be trivially copied, redistributed, or secretly backdoored without credit or payment to original authors.
+
+\subsection{Key Challenges}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Integrity Loss \& Model Poisoning:} End-users downloading weights have no cryptographic guarantee that the file matches the published evaluation checkpoints.
+    \item \textbf{Predatory Middleman Fees:} Existing software app stores and API aggregators retain up to 30\% commissions on developer earnings.
+    \item \textbf{Lack of Provenance Tracking:} Lineage across successive model updates (\texttt{v1.0} $\to$ \texttt{v2.0}) is completely absent in conventional download links.
+    \item \textbf{Rigid Licensing Options:} Buyers cannot easily trial a model on live inputs without committing to expensive, opaque commercial contracts.
+\end{itemize}
+
+\subsection{Project Objectives}
+\begin{enumerate}
+    \item Develop and deploy a Solidity smart contract using \textbf{Hardhat} on Ethereum Sepolia.
+    \item Implement cryptographic SHA-256 fingerprint commitments to guarantee model integrity.
+    \item Automate fair, peer-to-peer 98/2 revenue distribution directly through \textbf{MetaMask}.
+    \item Provide a dual-tier purchase model: 30-day time-limited trial vs. permanent ownership buyout.
+    \item Provide an offline/online verification portal confirming the official \textbf{ModelProof Verified\texttrademark} standard.
+\end{enumerate}
+
+% ==============================================================================
+% SECTION 2: HARDHAT DEVELOPMENT & TESTING
+% ==============================================================================
+\section{Hardhat Framework Implementation}
+
+\textbf{Hardhat} was chosen as the core Ethereum development environment for compiling, testing, and deploying the \texttt{ModelProof.sol} smart contract.
+
+\subsection{Hardhat Pipeline}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Compilation Engine:} Uses \texttt{npx hardhat compile} to target Solidity \texttt{0.8.24} with the EVM optimizer enabled (200 runs).
+    \item \textbf{Automated Test Suite:} Written in TypeScript using Mocha and Chai (\texttt{contracts/test/ModelProof.test.ts}), achieving \textbf{100\% pass rate across 21 test cases}.
+    \item \textbf{Deployment Script:} Uses \texttt{contracts/scripts/deploy.ts} to deploy artifacts to Ethereum Sepolia and automatically sync contract ABIs to the React frontend.
+\end{itemize}
+
+\subsection{Hardhat Configuration File (\texttt{hardhat.config.ts})}
+\begin{lstlisting}[language=TypeScript, caption={Hardhat Configuration}]
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import * as dotenv from "dotenv";
+dotenv.config();
+
+const config: HardhatUserConfig = {
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: { enabled: true, runs: 200 },
+    },
+  },
+  networks: {
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+  },
+};
+export default config;
+\end{lstlisting}
+
+% ==============================================================================
+% SECTION 3: BASIC SYSTEM BREAKDOWN (EXPLAINED IN SIMPLE TERMS)
+% ==============================================================================
+\section{Basic System Breakdown: What is in this Project?}
+
+To understand \textbf{ModelProof} without technical jargon, imagine an online store like \textbf{Amazon or the Apple App Store, but specifically designed for Artificial Intelligence (AI) models, powered by Blockchain}.
+
+Here is a simple explanation of how each part works:
+
+\subsection{1. What is an AI Model in Simple Words?}
+An AI model is a trained file (like a digital brain or a mathematical formula) that can predict things. For example:
+\begin{itemize}[leftmargin=1.5em]
+    \item Predicting how much crop a farm will produce based on rainfall and soil.
+    \item Detecting if a credit card transaction is fraudulent.
+    \item Automatically sorting candidate resumes by tech skills.
+\end{itemize}
+These models take days or weeks of hard work and expensive computing power to train.
+
+\subsection{2. The 3 User Roles in ModelProof}
+Anyone using the website can switch between three main roles:
+\begin{enumerate}[label=\textbf{(\alph*)}]
+    \item \textbf{The Creator (Seller):} An AI developer who uploads their trained model file, sets a price in Ethereum (ETH), and receives payments directly.
+    \item \textbf{The Buyer (Customer):} A software developer or company who browses the models, tests them with live inputs, and buys access or full ownership.
+    \item \textbf{The Admin (Supervisor):} Monitors total volume, protects the marketplace, and can hit an emergency ``Pause'' button if any problem occurs.
+\end{enumerate}
+
+\subsection{3. How Does a Purchase Work? (The Dual-Tier Choice)}
+When a buyer finds a model they want, they have two simple choices:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Choice 1: 30-Day License (Standard Price, e.g., 0.03 ETH):} \\
+    The buyer gets access to run predictions online through the website and an API key for 30 days. Perfect for testing or short-term projects. After 30 days, access automatically stops.
+    \item \textbf{Choice 2: Buy the Whole Model (3x Price, e.g., 0.09 ETH):} \\
+    The buyer pays extra to get **permanent lifetime ownership**. They can directly download the actual model file (\texttt{.joblib}) to their own computer, run it offline forever, and receive an official **ModelProof Verified\texttrademark** ownership certificate on the blockchain.
+\end{itemize}
+
+\subsection{4. Fair Money Split: 98\% to Creator, 2\% to Platform}
+In traditional app stores, companies like Apple or Google take up to 30\% of every sale. In ModelProof:
+\begin{equation*}
+    \text{Creator receives } \mathbf{98\%} \quad \mid \quad \text{Platform fee is only } \mathbf{2\%}
+\end{equation*}
+This payment happens **automatically and instantly** through a smart contract when the buyer approves the transaction in their MetaMask wallet.
+
+\subsection{5. The Verification Portal (Catching Fake or Modified Files)}
+If someone downloads a model file from the internet, how do they know it hasn't been altered or injected with a virus?
+\begin{itemize}[leftmargin=1.5em]
+    \item They drag and drop the file into ModelProof's \texttt{/verify} page.
+    \item The platform instantly calculates the file's unique digital fingerprint (SHA-256 hash) and compares it with the immutable record on Ethereum.
+    \item \textbf{Green Screen:} It matches 100\%! Shows the official green **``ModelProof Verified\texttrademark''** seal.
+    \item \textbf{Red Screen:} Hash mismatch! Warns the user that the file was altered, corrupted, or does not originate from the original creator.
+\end{itemize}
+
+\subsection{6. The Emergency Circuit Breaker (Safety Mechanism)}
+If an issue or malicious activity is discovered, the Admin can toggle **Emergency Pause**. This instantly freezes all purchasing, licensing, and model downloads across the smart contract, backend server, and frontend user interface until it is safely unpaused.
+
+% ==============================================================================
+% SECTION 4: SOLIDITY SMART CONTRACT SPECIFICATION
+% ==============================================================================
+\section{Solidity Smart Contract Architecture (\texttt{ModelProof.sol})}
+
+The smart contract is written in Solidity \texttt{\^{}0.8.24} and implements OpenZeppelin security contracts: \texttt{Ownable}, \texttt{ReentrancyGuard}, and \texttt{Pausable}.
+
+\subsection{Key Data Structures}
+\begin{lstlisting}[language=Solidity, caption={Data Structures in ModelProof.sol}]
+struct Model {
+    uint256 modelId;
+    address creator;
+    string name;
+    string description;
+    string framework;
+    string version;
+    bytes32 modelHash; // SHA-256 Cryptographic Fingerprint
+    string ipfsCid;    // IPFS Storage Reference
+    uint256 licensePrice;
+    uint256 createdAt;
+    bool active;
+}
+
+struct License {
+    uint256 licenseId;
+    uint256 modelId;
+    address licensee;
+    uint256 issuedAt;
+    uint256 expiry;
+    bool active;
+}
+\end{lstlisting}
+
+\subsection{Core Function Interfaces}
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{registerModel(name, desc, framework, version, hash, cid, price)}: Anchors new model fingerprint to Ethereum.
+    \item \texttt{purchaseLicense(modelId)}: Standard 30-day license purchase; splits 98\% creator / 2\% platform treasury.
+    \item \texttt{purchaseModelOwnership(modelId)}: Full buyout for 3x price; marks \texttt{hasModelOwnership[modelId][buyer] = true} with 100-year lifetime validity.
+    \item \texttt{isModelProofVerified(modelId, hash, buyer)}: View helper verifying hash integrity and buyer ownership status.
+    \item \texttt{pause() / unpause()}: Emergency circuit breaker freezing operations during detected exploits.
+\end{itemize}
+
+% ==============================================================================
+% SECTION 5: METAMASK INTEGRATION & WEB3 WORKFLOW
+% ==============================================================================
+\section{MetaMask Integration \& Web3 Settlement}
+
+The client connects to user wallets using the \textbf{Viem} Web3 library:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Wallet Onboarding:} Detects \texttt{window.ethereum} provider and requests authorization via \texttt{eth\_requestAccounts}.
+    \item \textbf{Network Enforcement:} Enforces Ethereum Sepolia Testnet (Chain ID \texttt{11155111}).
+    \item \textbf{Role Switching:} Listens to \texttt{accountsChanged} events in MetaMask to switch dynamically between **Buyer**, **Creator**, and **Admin** permissions in the UI.
+    \item \textbf{Transaction Signing:} Prompts MetaMask for explicit signature confirmation and transparent gas fee estimations.
+\end{enumerate}
+
+% ==============================================================================
+% SECTION 6: COMPLETE TEST CASES & SCREENSHOTS
+% ==============================================================================
+\section{System Test Cases \& Visual Verification}
+
+This section contains visual evidence covering Hardhat compilation, automated unit tests, MetaMask settlement, and functional UI features. Place your screenshots in the \texttt{screenshots/} folder and uncomment the corresponding \texttt{\textbackslash includegraphics} lines.
+
+\subsection{Hardhat Terminal Execution Tests}
+
+% --- TEST 1: HARDHAT COMPILE ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/hardhat_compile.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 1: Hardhat Compilation]} \\ 
+Command: \texttt{npx hardhat compile} \\
+Shows successful compilation of \texttt{ModelProof.sol} and TypeChain artifact generation with 0 errors. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 1:} Hardhat Smart Contract Compilation.}
+\label{fig:tc1_compile}
+\end{figure}
+
+% --- TEST 2: HARDHAT 21 PASSING TESTS ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/hardhat_test_suite.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 2: Hardhat Automated Unit Tests]} \\ 
+Command: \texttt{npx hardhat test} \\
+Shows all \textbf{21 unit tests passing} covering registration, 98/2 splits, expiration, ownership buyouts, and circuit breaker. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 2:} Hardhat Automated Unit Test Suite (21 Passing Tests).}
+\label{fig:tc2_tests}
+\end{figure}
+
+\newpage
+% --- TEST 3: SEPOLIA DEPLOYMENT ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/hardhat_deploy.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 3: Smart Contract Deployment to Sepolia]} \\ 
+Command: \texttt{npx hardhat run scripts/deploy.ts --network sepolia} \\
+Shows contract deployment at address \texttt{0x0F8C7b9666E3A9d997813aF106D53A0423c52a0d}. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 3:} Ethereum Sepolia Contract Deployment.}
+\label{fig:tc3_deploy}
+\end{figure}
+
+\subsection{MetaMask On-Chain Interaction Tests}
+
+% --- TEST 4: METAMASK APPROVAL ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/metamask_tx_approve.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 4: MetaMask Transaction Signing \& Gas Approval]} \\ 
+Shows MetaMask popup requesting signature for license acquisition with gas fee estimation on Sepolia. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 4:} MetaMask Transaction Signing Prompt.}
+\label{fig:tc4_metamask}
+\end{figure}
+
+\newpage
+% --- TEST 5: METAMASK SETTLEMENT MODAL ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/metamask_split_modal.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 5: On-Chain Settlement Modal]} \\ 
+Displays real-time breakdown: 98\% to Creator address and 2\% to Admin treasury with Etherscan transaction link. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 5:} 98/2 Royalty Settlement Modal.}
+\label{fig:tc5_split}
+\end{figure}
+
+\subsection{UI \& Functional Platform Tests}
+
+% --- TEST 6: DUAL TIER SELECTOR ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/ui_dual_tier.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 6: Dual-Tier Acquisition Cards]} \\ 
+File: \texttt{screenshots/ui_dual_tier.png} \\
+Shows Tier 1 (30-Day License) vs. Tier 2 (Buy Whole Model - ModelProof Verified\texttrademark) on \texttt{/model/:id}. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 6:} Dual-Tier Purchase Selector on Model Details.}
+\label{fig:tc6_tier}
+\end{figure}
+
+\newpage
+% --- TEST 7: MODELPROOF VERIFIED GREEN MATCH ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/ui_verify_match.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 7: ModelProof Verified Authenticity Portal (Green Match)]} \\ 
+File: \texttt{screenshots/ui_verify_match.png} \\
+Shows green verification seal, SHA-256 match, and verified ownership certificate with weight download button. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 7:} Verification Portal Confirming Authenticity and Ownership.}
+\label{fig:tc7_verify}
+\end{figure}
+
+% --- TEST 8: TAMPER DETECTION RED MISMATCH ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/ui_verify_tamper.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 8: Tamper Detection (Red Hash Mismatch)]} \\ 
+File: \texttt{screenshots/ui_verify_tamper.png} \\
+Demonstrates red alert rejecting an altered or tampered model weights file against the Ethereum anchor. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 8:} Cryptographic Rejection of Corrupted Model Weights.}
+\label{fig:tc8_tamper}
+\end{figure}
+
+\newpage
+% --- TEST 9: EMERGENCY CIRCUIT BREAKER ---
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{screenshots/ui_admin_pause.png}
+\framebox[\linewidth]{\parbox{0.95\linewidth}{\centering \vspace{2.2cm} 
+\textbf{[Screenshot 9: Emergency Circuit Breaker (Platform Paused)]} \\ 
+File: \texttt{screenshots/ui_admin_pause.png} \\
+Shows red alert banner on model details and grayed-out disabled purchase buttons when Admin pauses platform operations. \vspace{2.2cm}}}
+\caption{\textbf{Test Case 9:} Emergency Circuit Breaker Freezing Purchases.}
+\label{fig:tc9_pause}
+\end{figure}
+
+% ==============================================================================
+% SECTION 7: CONCLUSION
+% ==============================================================================
+\section{Conclusion \& Learning Outcomes}
+
+The \textbf{ModelProof} project demonstrates a robust, decentralized application integrating Web3 with machine learning:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Hardhat Mastery:} Gained hands-on experience in EVM testing, compilation, deployment scripting, and gas optimization.
+    \item \textbf{Solidity \& Security:} Implemented reentrancy guards, automated pull/push payment splits, access controls, and emergency circuit breakers.
+    \item \textbf{MetaMask Integration:} Managed reactive multi-account role switching, cryptographic signing, and transaction receipts.
+    \item \textbf{Real-World Impact:} Built an enterprise-ready system enabling machine learning creators to monetize their models securely with mathematical guarantees of integrity.
+\end{itemize}
+
+\end{document}
