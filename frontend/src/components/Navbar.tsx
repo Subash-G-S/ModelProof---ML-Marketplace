@@ -129,15 +129,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
               })}
             </div>
 
-            {/* 3 Accounts Configuration */}
-            <button
-              onClick={() => setIsAccountsModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-mp-surface-2 hover:bg-mp-surface-3 text-mp-text hover:text-white border border-mp-border text-xs font-medium transition-all"
-              title="Manage 3 MetaMask Accounts (Buyer, Creator, Admin)"
-            >
-              <Users className="h-3.5 w-3.5 text-mp-accent-light" />
-              <span className="hidden md:inline text-[11px]">3 Wallets</span>
-            </button>
 
             {/* Network Badge */}
             <button
