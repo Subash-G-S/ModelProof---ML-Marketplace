@@ -2,29 +2,26 @@
 
 % --- Essential Packages ---
 \usepackage[utf8]{inputenc}
-\usepackage[margin=0.85in]{geometry}
-\usepackage{booktabs}
-\usepackage{tabularx}
+\usepackage[margin=0.75in]{geometry}
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\usepackage{tcolorbox}
 \usepackage{setspace}
 
 % --- Typography & Spacing ---
-\setstretch{1.15}
-\setlength{\parskip}{5pt}
+\setstretch{1.05}
+\setlength{\parskip}{3.5pt}
 \setlength{\parindent}{0pt}
+\setlist[itemize]{topsep=2pt, partopsep=0pt, itemsep=2pt, parsep=0pt}
+\setlist[enumerate]{topsep=2pt, partopsep=0pt, itemsep=2pt, parsep=0pt}
 
-% --- Color Palette ---
+% --- Colors ---
 \definecolor{primaryblue}{RGB}{24, 76, 120}
 \definecolor{secondaryblue}{RGB}{41, 128, 185}
 \definecolor{accentgreen}{RGB}{39, 174, 96}
-\definecolor{darkcharcoal}{RGB}{44, 62, 80}
-\definecolor{boxbg}{RGB}{245, 248, 252}
-\definecolor{badgebg}{RGB}{234, 250, 234}
+\definecolor{darkgray}{RGB}{50, 50, 50}
 
 \hypersetup{
     colorlinks=true,
@@ -33,11 +30,11 @@
     citecolor=accentgreen
 }
 
-% --- Section Formatting ---
+% --- Section Styling ---
 \titleformat{\section}
-  {\normalfont\Large\bfseries\color{primaryblue}}{\thesection.}{0.8em}{}[\titlerule]
+  {\normalfont\large\bfseries\color{primaryblue}}{\thesection.}{0.6em}{}[\titlerule]
 \titleformat{\subsection}
-  {\normalfont\large\bfseries\color{secondaryblue}}{\thesubsection}{0.6em}{}
+  {\normalfont\normalsize\bfseries\color{secondaryblue}}{\thesubsection}{0.5em}{}
 
 % --- Running Header & Footer ---
 \pagestyle{fancy}
@@ -46,68 +43,65 @@
 \rhead{\footnotesize Page \thepage\ of 5}
 \renewcommand{\headrulewidth}{0.4pt}
 
-% --- Callout Box Config ---
-\tcbset{
-    colback=boxbg,
-    colframe=secondaryblue,
-    arc=4mm,
-    boxrule=1pt,
-    left=12pt,
-    right=12pt,
-    top=8pt,
-    bottom=8pt
-}
-
-% ==============================================================================
-% DOCUMENT BEGINS
-% ==============================================================================
 \begin{document}
 
 % ==============================================================================
-% PAGE 1: COVER & EXECUTIVE SUMMARY
+% PAGE 1: TITLE & COVER PAGE
 % ==============================================================================
 \thispagestyle{empty}
 \begin{center}
-    \vspace*{0.5cm}
-    
-    {\Huge \textbf{\color{primaryblue}MODELPROOF}}\\[0.3cm]
-    {\Large \textbf{Decentralized AI Marketplace \& Cryptographic Integrity Verification}}\\[0.2cm]
+    \vspace*{0.3cm}
+    {\LARGE \textbf{\color{primaryblue}MODELPROOF}}\\[0.2cm]
+    {\large \textbf{Decentralized AI Marketplace \& Cryptographic Integrity Verification}}\\[0.15cm]
     {\normalsize \textbf{A Dual-Tier Smart Contract Protocol for Machine Learning Models}}
     
-    \vspace{0.8cm}
-    \rule{\linewidth}{1.5pt}
+    \vspace{0.4cm}
+    \rule{0.95\linewidth}{1.2pt}
+    \vspace{0.4cm}
+
+    {\textbf{Academic Project Report --- Semester 5}}\\[0.1cm]
+    {\small Department of Computer Science and Engineering}
+
     \vspace{0.6cm}
 
-    {\large \textbf{Academic Project Report --- Semester 5}}\\[0.2cm]
-    {\normalsize Department of Computer Science and Engineering}
+    \fbox{
+        \begin{minipage}{0.88\linewidth}
+            \centering
+            \vspace{0.2cm}
+            \textbf{\large Project Authors / Student Credentials}\\[0.3cm]
+            \begin{tabular}{ll}
+                \textbf{Student 1:} & \textbf{G S Subash Chandra Bose} \quad (Roll No: \texttt{CB.SC.U4CSE24117}) \\[0.15cm]
+                \textbf{Student 2:} & \textbf{Rohan Vinod Kumar} \qquad\quad (Roll No: \texttt{CB.SC.U4CSE24646}) \\[0.15cm]
+                \textbf{Course:}    & Blockchain \& Distributed Ledger Technologies \\
+                \textbf{Term:}      & Semester 5 (2025--2026)
+            \end{tabular}
+            \vspace{0.2cm}
+        \end{minipage}
+    }
+\end{center}
 
-    \vspace{1.2cm}
+\vspace{0.5cm}
 
-    \begin{tcolorbox}[colback=white,colframe=primaryblue,arc=3mm,width=0.88\linewidth]
-        \centering
-        \textbf{\large Project Authors / Student Credentials}\\[0.4cm]
-        \begin{tabular}{ll}
-            \textbf{Student 1:} & \textbf{G S Subash Chandra Bose} \quad (Roll No: \texttt{CB.SC.U4CSE24117}) \\[0.2cm]
-            \textbf{Student 2:} & \textbf{Rohan Vinod Kumar} \qquad\quad (Roll No: \texttt{CB.SC.U4CSE24646}) \\[0.2cm]
-            \textbf{Course:}    & Blockchain \& Distributed Ledger Technologies \\
-            \textbf{Term:}      & Semester 5 (2025--2026)
-        \end{tabular}
-    \end{tcolorbox}
+\section*{Executive Summary}
+In contemporary artificial intelligence engineering, Machine Learning (ML) models govern critical decisions across finance, healthcare diagnostics, and autonomous applications. Despite this reliance, the distribution of serialized models (\texttt{.joblib}, \texttt{.onnx}) faces two fundamental challenges:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Model Tampering \& Poisoning:} Downstream buyers cannot mathematically prove whether downloaded weights were modified, backdoored, or corrupted after training.
+    \item \textbf{Opaque Royalties \& Piracy:} AI creators have no trustless, decentralized mechanism to sell model access without surrendering high middleman commissions.
+\end{enumerate}
 
-    \vspace{1.0cm}
+\textbf{ModelProof} solves this through an end-to-end decentralized application (DApp) on Ethereum. By anchoring cryptographic SHA-256 fingerprints to smart contracts, ModelProof delivers an immutable registry where model integrity can be verified on-chain in milliseconds.
 
-    \begin{minipage}{0.92\linewidth}
-        \section*{Executive Summary}
-        In modern enterprise software, Machine Learning (ML) models govern critical decisions across finance, healthcare, and autonomous systems. Despite their value, the distribution of AI artifacts suffers from two critical vulnerabilities:
-        \begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
-            \item \textbf{The Tampering \& Poisoning Problem:} Buyers downloading serialized models (\texttt{.joblib}, \texttt{.onnx}) cannot mathematically verify whether the weights were altered or poisoned with a backdoor after training.
-            \item \textbf{Opaque Monetization \& Piracy:} AI creators lack decentralized, trustless royalty mechanisms that enforce access control without expensive middleman fees.
-        \end{enumerate}
-        \textbf{ModelProof} solves this through an end-to-end decentralized application (DApp). By anchoring cryptographic SHA-256 fingerprints to Ethereum smart contracts, ModelProof delivers an immutable registry where model integrity can be proven in milliseconds. It introduces an automated \textbf{98\% / 2\% creator-admin revenue split}, an on-chain \textbf{Emergency Pause Circuit Breaker}, and a \textbf{Dual-Tier License Protocol} that separates lightweight cloud inference licenses from lifetime physical weights ownership.
-    \end{minipage}
+\subsection*{Key Contributions of the Project}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Dual-Tier Access Protocol:} Differentiates between a budget 30-day API inference license and permanent \textbf{ModelProof Verified\texttrademark} full-weight ownership ($3\times$ price).
+    \item \textbf{Direct 98\% / 2\% Escrow Split:} Smart contracts disburse 98\% of incoming ETH directly to model creators and 2\% to platform governance atomically.
+    \item \textbf{Emergency Pause Circuit Breaker:} Admin security switch that instantly halts licensing, downloads, and registration during security incidents.
+    \item \textbf{Zero-Knowledge Public Verifier:} Browser-based verification portal allowing anyone to cross-check local model files against Ethereum testnet state.
+\end{itemize}
 
-    \vfill
-    {\footnotesize \textit{Compiled with \LaTeX\ | ModelProof Platform v1.0.0}}
+\vfill
+\begin{center}
+    {\footnotesize \textit{ModelProof DApp --- Department of Computer Science and Engineering}}
 \end{center}
 
 \clearpage
@@ -117,38 +111,34 @@
 % ==============================================================================
 \section{Easy-Level Understanding: What is ModelProof?}
 
-To understand ModelProof without technical jargon, consider how valuable physical assets like cars or real estate are bought, sold, and protected.
-
-\subsection{The Real-World Analogy: "A Digital Title Deed \& DNA Test for AI"}
+\subsection{The Real-World Analogy: Digital Car Title \& DNA Test}
+To understand ModelProof without complex technical jargon, compare it to purchasing a car:
 \begin{itemize}[leftmargin=1.5em]
-    \item \textbf{The Car Title Analogy:} When you purchase a vehicle, you do not just hand over cash and take the keys; you inspect the vehicle identification number (VIN) and verify the governmental registration deed. Before ModelProof, buying an AI model online was like buying a car from an unknown seller with no registration, no title deed, and no guarantee that the engine was not secretly swapped.
-    \item \textbf{The Digital DNA Test:} Every file on a computer has a unique mathematical fingerprint (a cryptographic hash). If even a single parameter out of 100 million neural network weights is altered, this fingerprint completely changes. ModelProof acts as the official notary office that registers this fingerprint on an unalterable public ledger (the blockchain).
+    \item \textbf{The Car Title Analogy:} When you buy a vehicle, you inspect the Vehicle Identification Number (VIN) and verify the governmental registration deed. Buying an AI model online today is like buying a used car from an unknown stranger without a registration paper or guarantee that the engine was not secretly swapped.
+    \item \textbf{The Digital DNA Test:} Every digital file has a unique mathematical fingerprint (a cryptographic hash). If even one parameter out of 100 million neural network weights is altered, this fingerprint completely changes. ModelProof acts as an unalterable notary that stamps this fingerprint on the blockchain.
 \end{itemize}
 
-\subsection{Why Existing AI Marketplaces Fail}
-Today, data scientists publish models on conventional platforms (e.g., HuggingFace, GitHub, AWS Marketplace). These centralized hubs exhibit significant trust vulnerabilities:
-\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
-    \item \textbf{Centralized Single Points of Failure:} A centralized database can be hacked, modified by rogue employees, or seized without user consensus.
-    \item \textbf{Silent Model Drift and Backdoor Attacks:} Attackers can re-upload malicious weights under popular names without users noticing subtle prediction changes.
-    \item \textbf{Payment Overhead \& High Commission:} Traditional app stores charge 15\% to 30\% platform commissions, delaying creator payouts by weeks.
+\subsection{Why Conventional AI Hubs Fall Short}
+Existing centralized platforms (HuggingFace, GitHub, AWS Marketplace) suffer from:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Single Points of Failure:} Centralized hosting servers can be compromised, tampered with by bad actors, or experience downtime.
+    \item \textbf{Silent Model Drift:} Attackers can re-upload malicious weights under popular names without users noticing minor changes in prediction behavior.
+    \item \textbf{High Platform Fees:} Traditional app marketplaces charge 15\% to 30\% commissions and delay creator payouts by weeks.
 \end{enumerate}
 
 \subsection{How ModelProof Works in 4 Simple Steps}
-
-\begin{tcolorbox}[colback=badgebg,colframe=accentgreen,title=\textbf{The ModelProof Life Cycle in Four Plain Steps}]
-\begin{enumerate}[leftmargin=1.2em,itemsep=3pt]
-    \item \textbf{Step 1 --- Build \& Upload:} The AI engineer trains a model (e.g., predicting house prices or credit fraud) and uploads the file to ModelProof. The backend automatically calculates its unique SHA-256 digital fingerprint.
-    \item \textbf{Step 2 --- Register on the Blockchain:} The engineer connects a crypto wallet (MetaMask) and notarizes the model on the Ethereum blockchain. The model's name, version, accuracy metric, and fingerprint are permanently written into smart contract storage.
-    \item \textbf{Step 3 --- Choose Acquisition Tier:} A buyer browses the marketplace. They can either pay a budget fee in Sepolia ETH for a \textbf{30-Day API Testing License} or pay a 3x premium for the \textbf{ModelProof Verified\texttrademark\ Full Ownership} tier to download the raw weights.
-    \item \textbf{Step 4 --- Instant Verification:} Anyone holding an AI weight file can drag-and-drop it into the verification portal. ModelProof checks the blockchain live. If it matches, a green verified seal appears. If a single bit was tampered with, an instant red alert warning is triggered.
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{1. Train \& Upload:} An AI developer trains a model (e.g., California housing valuation or cancer diagnosis) and uploads it. The backend computes its SHA-256 fingerprint.
+    \item \textbf{2. Blockchain Notarization:} Using MetaMask, the creator writes the model's name, version, accuracy, and fingerprint into the Ethereum smart contract.
+    \item \textbf{3. Marketplace Purchase:} Buyers browse the catalog. They can buy a \textbf{30-Day API License} for testing or upgrade to \textbf{ModelProof Verified\texttrademark\ Full Ownership} to download the raw weights.
+    \item \textbf{4. Instant Tamper Verification:} Anyone holding a model file can drag-and-drop it into the verification portal. ModelProof checks the blockchain: a green check confirms original weights, while any altered file triggers an instant red tamper alert.
 \end{enumerate}
-\end{tcolorbox}
 
 \subsection{The Three Roles in the Ecosystem}
 \begin{itemize}[leftmargin=1.5em]
-    \item \textbf{The Creator (Data Scientist):} Registers novel AI algorithms, establishes licensing pricing in ETH, and collects 98\% instant royalties directly into their wallet without waiting for payroll or invoice approvals.
-    \item \textbf{The Buyer (Enterprise / Developer):} Discovers verified AI models, tests live predictions in an interactive sandbox playground, and securely purchases licenses or weights.
-    \item \textbf{The Administrator (Platform Governance):} Monitors marketplace health and holds an emergency circuit breaker switch to freeze financial transactions if security anomalies occur.
+    \item \textbf{Creator:} Publishes models, sets prices in ETH, and collects 98\% instant royalties directly into their wallet.
+    \item \textbf{Buyer:} Tests models live in the interactive playground, purchases licenses or weights, and verifies authenticity.
+    \item \textbf{Admin:} Oversees marketplace health and controls the emergency circuit breaker to protect funds.
 \end{itemize}
 
 \clearpage
@@ -158,116 +148,105 @@ Today, data scientists publish models on conventional platforms (e.g., HuggingFa
 % ==============================================================================
 \section{What is in this Project? Core Features \& Capabilities}
 
-ModelProof is an end-to-end production-grade system combining high-performance machine learning inference with decentralized blockchain settlement.
+ModelProof unites machine learning inference with decentralized blockchain settlement into a production-grade application.
 
-\begin{table}[H]
-\centering
-\small
-\begin{tabularx}{\linewidth}{p{4.2cm}X}
-\toprule
-\textbf{Feature Module} & \textbf{Functionality \& Technical Implementation} \\
-\midrule
-\textbf{Dual-Tier Acquisition System} & Allows users to purchase either a \textbf{Standard 30-Day API License} (cloud inference access) or upgrade to \textbf{ModelProof Verified\texttrademark\ Full Ownership} (3x price, lifetime validity, and physical \texttt{.joblib} weights download). \\
-\addlinespace
-\textbf{Automated SHA-256 Fingerprinting} & Chunk-based streaming cryptographic hashing calculates deterministic 256-bit digests for models of any size without memory buffer exhaustion. \\
-\addlinespace
-\textbf{Direct 98\% / 2\% Escrow Protocol} & Solidity smart contract logic atomically splits incoming ETH payments: 98\% to model creator wallet, 2\% platform royalty to admin wallet in the same transaction. \\
-\addlinespace
-\textbf{Emergency Pause Circuit Breaker} & Administrative security safeguard (\texttt{whenNotPaused}) enabling instant freezing of purchases, downloads, and registrations during security alerts. \\
-\addlinespace
-\textbf{Zero-Knowledge Verification Portal} & Public client-side verification engine allowing anyone to cross-check local model files against Sepolia on-chain hashes without logging in. \\
-\addlinespace
-\textbf{Interactive AI Playground} & Built-in web inference engine allowing prospective buyers to test predictions with custom inputs (e.g., real estate or medical indicators) before buying. \\
-\addlinespace
-\textbf{Automated Model Recommender} & Comparative analytics engine providing performance benchmarking (accuracy, F1-score, latency) across all registered versions. \\
-\bottomrule
-\end{tabularx}
-\caption{Comprehensive Breakdown of ModelProof Functional Modules}
-\end{table}
-
-\subsection{Detailed Breakdown of Core Modules}
-
-\subsubsection{1. Dual-Tier Licensing \& ModelProof Verified\texttrademark}
-Traditional digital stores force an all-or-nothing approach. ModelProof introduces two distinct programmatic access tiers:
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item \textbf{Tier 1 --- 30-Day API Access:} Ideal for application developers who only need remote API inferences via FastAPI endpoints. The smart contract sets an expiration timestamp at \texttt{block.timestamp + 30 days}.
-    \item \textbf{Tier 2 --- ModelProof Verified\texttrademark\ (Full Model Ownership):} Intended for enterprise buyers seeking offline deployment. The buyer pays $3\times$ the base price. The contract records permanent ownership (\texttt{hasModelOwnership[id][buyer] = true}), unlocks the raw model weights download button, and issues a verified cryptographic ownership badge.
+\subsection{1. Dual-Tier Acquisition System}
+Unlike typical marketplaces that force an all-or-nothing purchase, ModelProof introduces two programmatic tiers:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Standard 30-Day API License ($1\times$ Base Price):} Grants 30 days of programmatic inference access through the FastAPI backend. Ideal for app developers who do not need to host or manage physical weights.
+    \item \textbf{ModelProof Verified\texttrademark\ Full Ownership ($3\times$ Base Price):} Records lifetime ownership on-chain (\texttt{hasModelOwnership = true}), unlocks the raw physical weights download button (\texttt{.joblib}), and awards an official verified creator badge.
 \end{itemize}
 
-\subsubsection{2. Multi-Model Support \& Live Inference}
-ModelProof comes pre-loaded with production machine learning models trained on benchmark datasets:
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item \textbf{California Housing Valuation Model:} Random Forest Regression predicting home valuations based on geographical coordinates, income, and room count.
-    \item \textbf{Breast Cancer Diagnostic Classifier:} Gradient Boosting (XGBoost) classifier predicting benign vs.\ malignant tumors with 97.4\% test accuracy.
-    \item \textbf{Wine Quality Assessment Model:} Multi-class classification based on chemical properties (pH, sulfates, alcohol percentage).
+\subsection{2. Automated Cryptographic Fingerprinting}
+During model registration, the system streams file bytes through a SHA-256 algorithm:
+\[
+\text{File Binary Stream} \xrightarrow{\text{SHA-256}} \text{256-bit Digest} \xrightarrow{\text{On-Chain}} \texttt{bytes32 modelHash}
+\]
+This hash is permanently anchored in the smart contract. Because the hash is stored on-chain, even if the backend storage is altered, the tampering is detected immediately.
+
+\subsection{3. Smart Contract Escrow \& 98\% / 2\% Revenue Split}
+Financial transactions are governed entirely by Solidity smart contracts:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{98\% Direct Creator Payout:} Transferred directly to the creator's wallet in the same transaction.
+    \item \textbf{2\% Platform Protocol Fee:} Routed to the platform treasury for ecosystem maintenance.
+    \item \textbf{Zero Middleman Delay:} Settlements execute in seconds without third-party escrow approval.
 \end{itemize}
 
-\subsubsection{3. Tamper-Proof Cryptographic Security}
-When a model is registered, the SHA-256 digest is saved directly into Solidity state storage (\texttt{bytes32} representation). Even if an adversary modifies the hosting server's file system, the verification portal recalculates the hash on the fly, compares it against the Sepolia smart contract, and rejects mismatched files.
+\subsection{4. Emergency Pause Circuit Breaker}
+Security is enforced using the OpenZeppelin \texttt{Pausable} pattern:
+\begin{itemize}[leftmargin=1.5em]
+    \item If anomalous behavior or zero-day exploits occur, the admin executes \texttt{pause()}.
+    \item All purchases, licensing, model registrations, and weight downloads are instantly frozen.
+    \item The frontend and backend immediately display warning banners and reject operations with HTTP 403.
+\end{itemize}
+
+\subsection{5. Interactive AI Playground \& Verification Portal}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Live Inference Sandbox:} Users can test pre-loaded models (California Housing, Breast Cancer Classifier, Wine Quality) with real-time input sliders before purchasing.
+    \item \textbf{Public Verification Portal:} Drag-and-drop hash verification verifies any model against Sepolia contract state without requiring login or gas fees.
+\end{itemize}
 
 \clearpage
 
 % ==============================================================================
 % PAGE 4: TECHNOLOGY STACK & ARCHITECTURE
 % ==============================================================================
-\section{Complete Technology Stack \& System Architecture}
+\section{Technology Stack \& System Architecture}
 
-ModelProof employs a modern multi-tier architecture uniting Web3 decentralization with high-throughput Web2 services.
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabularx}{\linewidth}{l p{3.2cm} X}
-\toprule
-\textbf{Layer} & \textbf{Technology / Library} & \textbf{Role in the Project} \\
-\midrule
-\textbf{Blockchain} & Solidity (\texttt{\^{}0.8.20}) & Self-executing smart contracts managing licensing, registration, and splits. \\
- & OpenZeppelin Contracts & Industry-standard \texttt{Ownable} and \texttt{Pausable} security modules. \\
- & Hardhat Framework & Ethereum compilation, unit testing (21 test cases), and deployment scripts. \\
- & Sepolia Testnet & Public Ethereum testnet providing decentralized immutable state. \\
-\addlinespace
-\textbf{Backend} & Python 3.11+ / FastAPI & Asynchronous REST API serving inference, hashing, and database persistence. \\
- & Scikit-Learn \& XGBoost & Machine learning training, inference execution, and artifact serializing. \\
- & Joblib \& NumPy & High-speed deserialization and matrix processing of model weights. \\
- & SQLite / SQLAlchemy & Local high-speed caching for search indexes and user metadata. \\
- & Uvicorn ASGI Server & High-concurrency production web server handling HTTP requests. \\
-\addlinespace
-\textbf{Frontend} & React 18 + Vite & Fast, reactive single-page user interface with modular component architecture. \\
- & TypeScript & Static type safety across state management, API schemas, and contracts. \\
- & Ethers.js (v6) & Client-side Web3 provider bridging React components with MetaMask wallets. \\
- & Lucide-React & Visual icon system for intuitive, aesthetic dashboard navigation. \\
-\addlinespace
-\textbf{DevOps} & Vercel / Render & Continuous deployment pipeline for frontend and backend web services. \\
- & Git \& GitHub & Version control with structured commit branches and CI readiness. \\
-\bottomrule
-\end{tabularx}
-\caption{ModelProof Technology Stack Overview}
-\end{table}
-
-\subsection{Architectural Flow \& Data Interactions}
-The architectural model operates across three isolated boundaries: the Client Layer, the Off-Chain Engine, and the On-Chain Ledger:
-
-\begin{tcolorbox}[colback=boxbg,colframe=primaryblue,title=\textbf{System Architectural Flowchart}]
-\small
-\begin{verbatim}
- [ User / Browser (React + Ethers.js) ] <==== RPC Transactions ====> [ MetaMask Wallet ]
-          |                                                                   |
-          | (1) Upload & Infer                                                | (2) Sign & Pay
-          v                                                                   v
- [ FastAPI AI Engine (Python) ]                                    [ Sepolia Ethereum Network ]
-    - SHA-256 Fingerprinting                                          - ModelProof.sol Contract
-    - Scikit-Learn Inference Execution                                - 98% Creator / 2% Admin Split
-    - SQLite Metadata Cache                                           - Immutable Hash Storage
-    - Model Weight Storage (.joblib)                                  - Circuit Breaker Pause
-          |                                                                   |
-          +================ (3) Verify On-Chain Integrity ===================+
-\end{verbatim}
-\end{tcolorbox}
+\subsection{Simplified Technology Stack Overview}
+Rather than using bloated layers, ModelProof utilizes a focused, modern technology stack:
 
 \begin{itemize}[leftmargin=1.5em]
-    \item \textbf{Decentralized Trust Boundary:} No private keys or payment credentials ever touch the FastAPI backend; payments are negotiated directly between MetaMask and the Ethereum network.
-    \item \textbf{Optimized Gas Footprint:} Rather than storing gigabyte-sized neural network weights on the blockchain (which would cost tens of thousands of dollars in gas), ModelProof stores only the 32-byte cryptographic digest on-chain. This maintains absolute security at minimal gas cost.
+    \item \textbf{Smart Contract Layer (Ethereum / Sepolia):}
+    \begin{itemize}[leftmargin=1.2em]
+        \item \textbf{Solidity (\texttt{\^{}0.8.20}):} Custom contract logic for model registration, dual-tier licensing, and 98/2 revenue distribution.
+        \item \textbf{OpenZeppelin Contracts:} Battle-tested security modules for access control (\texttt{Ownable}) and emergency controls (\texttt{Pausable}).
+        \item \textbf{Hardhat Suite:} Local EVM node, automated deployment scripts, and 21 automated unit tests.
+    \end{itemize}
+
+    \item \textbf{Backend AI Engine (Python 3.11 / FastAPI):}
+    \begin{itemize}[leftmargin=1.2em]
+        \item \textbf{FastAPI \& Uvicorn:} Asynchronous, high-throughput REST API server for inference and hashing.
+        \item \textbf{Scikit-Learn, XGBoost, Joblib:} ML model training, artifact serialization, and runtime prediction.
+        \item \textbf{SQLite / SQLAlchemy:} Fast local caching for catalog metadata and license records.
+    \end{itemize}
+
+    \item \textbf{Frontend User Interface (React 18 + Vite):}
+    \begin{itemize}[leftmargin=1.2em]
+        \item \textbf{React 18 \& TypeScript:} Strongly typed single-page application with reactive state management.
+        \item \textbf{Ethers.js (v6):} Lightweight Web3 provider bridging browser components with MetaMask.
+        \item \textbf{Lucide-React \& Modern CSS:} Responsive, accessible interface with visual verification badges.
+    \end{itemize}
+
+    \item \textbf{Infrastructure \& DevOps:}
+    \begin{itemize}[leftmargin=1.2em]
+        \item \textbf{MetaMask:} Browser wallet for cryptographic signing and ETH transactions.
+        \item \textbf{Render \& Vercel:} Cloud hosting for backend API and frontend client.
+    \end{itemize}
 \end{itemize}
+
+\subsection{System Architecture Flow}
+The platform partitions responsibilities cleanly across three distinct domains:
+
+\begin{center}
+\fbox{
+\begin{minipage}{0.92\linewidth}
+\footnotesize
+\textbf{1. Client Layer (React + Ethers.js + MetaMask)} \\
+User interacts with UI $\rightarrow$ Signs transactions via MetaMask $\rightarrow$ Direct RPC to Ethereum.
+\vspace{0.15cm}
+
+\textbf{2. Off-Chain Intelligence Layer (FastAPI + ML Models)} \\
+Handles model uploads $\rightarrow$ Computes SHA-256 fingerprint $\rightarrow$ Serves live sandbox inference.
+\vspace{0.15cm}
+
+\textbf{3. On-Chain Settlement Layer (Sepolia Smart Contract)} \\
+Stores immutable model hash $\rightarrow$ Splits ETH payment (98\% creator / 2\% admin) $\rightarrow$ Grants ownership.
+\end{minipage}
+}
+\end{center}
+
+\textbf{Gas Optimization Strategy:} Heavy neural network files are \emph{never} stored directly on the blockchain. Only the 32-byte cryptographic digest is anchored on-chain. This provides mathematical tamper resistance while keeping transaction fees near zero.
 
 \clearpage
 
@@ -276,52 +255,44 @@ The architectural model operates across three isolated boundaries: the Client La
 % ==============================================================================
 \section{Operational Workflows, Security Analysis \& Conclusion}
 
-\subsection{Detailed Operational Workflows}
+\subsection{Core Operational Workflows}
 
-\subsubsection{Workflow A: Model Registration \& Cryptographic Anchoring}
-\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
-    \item The creator prepares a serialized model file (\texttt{model.joblib}) and launches the registration wizard.
-    \item The FastAPI backend streams the binary bytes through a SHA-256 hashing pipeline, generating a unique hexadecimal digest.
-    \item The creator clicks \textbf{"Publish to Blockchain"}. Ethers.js constructs an on-chain transaction calling \texttt{registerModel(name, version, hash, priceWei)}.
-    \item The Ethereum validator network confirms the block; the model is now permanently locked into public state.
+\subsubsection{Workflow 1: Creator Model Registration}
+\begin{enumerate}[leftmargin=1.5em]
+    \item The creator uploads a serialized model file (\texttt{.joblib}) via the registration wizard.
+    \item The FastAPI backend streams the binary bytes to generate its unique SHA-256 hash.
+    \item The creator clicks \textbf{"Publish to Blockchain"}. MetaMask requests an on-chain transaction calling \texttt{registerModel(name, version, hash, priceWei)}.
+    \item The Ethereum network confirms the block, permanently notarizing the model.
 \end{enumerate}
 
-\subsubsection{Workflow B: Dual-Tier Purchasing \& Instant Settlement}
-\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
-    \item The buyer selects either \textbf{30-Day License} ($1\times$) or \textbf{ModelProof Verified\texttrademark} ($3\times$).
-    \item MetaMask prompts the user with the exact ETH value calculated based on current gas fees.
-    \item \texttt{ModelProof.sol} executes the financial split: 98\% of the funds are transferred directly to the creator's address; 2\% is transferred to the platform governance address.
-    \item If full ownership was selected, the contract toggles \texttt{hasModelOwnership = true}, immediately enabling the physical weight download button.
+\subsubsection{Workflow 2: Buyer Licensing \& Ownership Acquisition}
+\begin{enumerate}[leftmargin=1.5em]
+    \item A buyer selects either the \textbf{30-Day License} ($1\times$) or \textbf{ModelProof Verified\texttrademark} ($3\times$).
+    \item The smart contract receives payment, instantly routing 98\% to the creator and 2\% to the admin.
+    \item For full ownership, \texttt{hasModelOwnership[id][buyer]} is set to \texttt{true}, unlocking raw model weight downloads.
 \end{enumerate}
 
-\subsubsection{Workflow C: Tamper Detection \& Zero-Knowledge Verification}
-\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
-    \item Any stakeholder uploads a candidate model file to \texttt{/verify}.
-    \item The client computes the file's hash and queries \texttt{isModelProofVerified(modelId, calculatedHash)}.
-    \item If the file was altered by even one bit, the hashes mismatch. The UI immediately renders a \textbf{"Tampered / Unverified"} alert, preventing poisoned models from being loaded into production.
+\subsubsection{Workflow 3: Verification \& Tamper Detection}
+\begin{enumerate}[leftmargin=1.5em]
+    \item Any user uploads a candidate model file to the public \texttt{/verify} portal.
+    \item The portal recalculates the SHA-256 hash and calls \texttt{isModelProofVerified(modelId, hash)}.
+    \item If identical, the green verified seal appears; if altered by even one bit, an instant red warning alert is triggered.
 \end{enumerate}
 
-\subsection{Security Guarantees \& Circuit Breaker Safeguards}
-\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
-    \item \textbf{Reentrancy Defense:} All on-chain payment disbursements follow the Checks-Effects-Interactions pattern, preventing recursive drain exploits.
-    \item \textbf{Emergency Pause Protocol:} If malicious behavior is detected, the contract owner executes \texttt{setEmergencyPause(true)}. All registration, licensing, and weight download functions immediately revert, protecting user capital.
-    \item \textbf{Data Privacy:} Model evaluation datasets remain local; only model metadata and cryptographic commitments are broadcast to the network.
+\subsection{Security Guarantees}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Reentrancy Protection:} All contract disbursements use the Checks-Effects-Interactions pattern.
+    \item \textbf{Emergency Fail-Safe:} The admin circuit breaker can freeze all financial operations within seconds.
+    \item \textbf{Decoupled Trust:} Private keys remain exclusively within MetaMask and are never shared with the backend.
 \end{itemize}
 
-\subsection{Academic Conclusion \& Future Scope}
-ModelProof demonstrates the successful convergence of machine learning engineering and distributed ledger technology. By offloading computational inference to optimized ASGI Python services while anchoring asset provenance and revenue distribution to Ethereum smart contracts, ModelProof delivers a tamper-proof, fair, and scalable marketplace.
-
-Future iterations of the platform will explore:
-\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
-    \item Integrating Layer-2 rollup protocols (e.g., Arbitrum or Optimism) to reduce transaction gas fees to sub-cent levels.
-    \item Implementing Zero-Knowledge Machine Learning (zk-SNARKs) to prove model accuracy on test sets without disclosing the test data.
-    \item Adding decentralized storage persistence via IPFS and Filecoin for fully distributed weight hosting.
-\end{enumerate}
+\subsection{Conclusion \& Academic Takeaway}
+ModelProof provides a complete, working blueprint for trustless AI distribution. By combining Python-based machine learning inference with Ethereum smart contract provenance, it eliminates middleman fees, prevents silent model poisoning, and offers creators fair, instantaneous compensation.
 
 \vspace{0.4cm}
 \begin{center}
-    \rule{0.6\linewidth}{0.8pt}\\[0.2cm]
-    \textbf{End of Academic Report} --- ModelProof: Verified Machine Learning Marketplace
+    \rule{0.6\linewidth}{0.8pt}\\[0.15cm]
+    \textbf{End of Report} --- ModelProof: Decentralized AI Marketplace (Semester 5)
 \end{center}
 
 \end{document}
