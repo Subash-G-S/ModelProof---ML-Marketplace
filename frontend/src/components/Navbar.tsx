@@ -22,19 +22,13 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
   const {
-    address,
     displayAddress,
     isConnected,
     balance,
-    chainId,
-    networkName,
     role,
-    isCorrectNetwork,
-    configuredAccounts,
     connectWallet,
     disconnectWallet,
     switchRole,
-    switchNetwork,
   } = useWallet();
 
   const navigate = useNavigate();
@@ -129,19 +123,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAssistant }) => {
               })}
             </div>
 
-
-            {/* Network Badge */}
-            <button
-              onClick={() => switchNetwork(chainId === 11155111 ? 31337 : 11155111)}
-              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono transition-colors ${
-                isCorrectNetwork
-                  ? "bg-mp-bg border-mp-border text-mp-text-muted hover:text-white"
-                  : "bg-red-500/10 border-red-500/30 text-red-400"
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${isCorrectNetwork ? "bg-emerald-400" : "bg-red-400 animate-pulse"}`} />
-              <span>{isCorrectNetwork ? networkName : "Wrong Net"}</span>
-            </button>
 
             {/* Wallet Button */}
             {isConnected ? (
