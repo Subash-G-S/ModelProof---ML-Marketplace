@@ -55,7 +55,7 @@ interface ModelContextType {
 
 const ModelContext = createContext<ModelContextType | undefined>(undefined);
 
-// Initial real demo models trained in Phase 12
+// Initial real demo models trained in Phase 12 & persistent registry
 const INITIAL_DEMO_MODELS: ModelRecord[] = [
   {
     modelId: 1,
@@ -70,7 +70,7 @@ const INITIAL_DEMO_MODELS: ModelRecord[] = [
     licensePriceEth: "0.05",
     createdAt: Date.now() - 86400000 * 5,
     active: true,
-    licenseCount: 38,
+    licenseCount: 39,
     versionHistory: ["v1.0", "v1.1", "v1.2"],
     metrics: {
       r2: 0.955,
@@ -124,7 +124,7 @@ const INITIAL_DEMO_MODELS: ModelRecord[] = [
     licensePriceEth: "0.04",
     createdAt: Date.now() - 86400000 * 1,
     active: true,
-    licenseCount: 42,
+    licenseCount: 44,
     versionHistory: ["v1.0", "v2.0"],
     metrics: {
       accuracy: 100.0,
@@ -136,6 +136,160 @@ const INITIAL_DEMO_MODELS: ModelRecord[] = [
     useCase: "Automated applicant tracking systems (ATS), talent screening, technical talent matching",
     filename: "resume_classifier.joblib",
     filesize: 21308,
+  },
+  {
+    modelId: 4,
+    creator: "0x24522a62c4aa130225d415ee2b222fd473e90b83",
+    name: "Fraud Sentinal",
+    description: "Ensemble Random Forest classifier trained on 6 financial indicators to classify suspicious transactions with low false-positive rates.",
+    framework: "Random Forest",
+    version: "v1.0",
+    modelType: "Classification",
+    modelHash: "0x41072a044937425a6e0e13f7518b67e15d01683cc3116722823307ea565db7bb",
+    ipfsCid: "bafybeit45xgfz1ybmpmvghmn63",
+    licensePriceEth: "0.01",
+    createdAt: Date.now() - 86400000 * 1,
+    active: true,
+    licenseCount: 3,
+    versionHistory: ["v1.0"],
+    metrics: {
+      accuracy: 99.4,
+      dataset_size: "10,000 transactions",
+      training_time: "Verified Run",
+    },
+    useCase: "Real-time credit card and transaction anomaly fraud screening",
+    filename: "fraud_detector_rf.joblib",
+    filesize: 182233,
+  },
+  {
+    modelId: 5,
+    creator: "0x24522a62c4aa130225d415ee2b222fd473e90b83",
+    name: "Diabetes Outcome Demo Classifier",
+    description: "Validated diagnostic decision support classifier determining clinical diabetes outcome risks based on diagnostic biomarkers.",
+    framework: "Scikit-Learn",
+    version: "v1.0",
+    modelType: "Classification",
+    modelHash: "0x0de03c1e4636812cf482a6a299b1910b50078c71ecff4680f625da535f1f23b7",
+    ipfsCid: "bafybeidf24nnberempmvkh6e3v",
+    licensePriceEth: "0.005",
+    createdAt: Date.now() - 86400000 * 1,
+    active: true,
+    licenseCount: 2,
+    versionHistory: ["v1.0"],
+    metrics: {
+      dataset_size: "Pima Indian Diabetes Diagnostic Dataset",
+      training_time: "Verified Run",
+    },
+    useCase: "Diabetes risk assessment and proactive clinical outcome guidance",
+    filename: "diabetes_demo_classifier.joblib",
+    filesize: 2099,
+  },
+];
+
+const INITIAL_LICENSES: LicenseRecord[] = [
+  {
+    licenseId: 1,
+    modelId: 2,
+    modelName: "CropClassification-RandomForest",
+    creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
+    licensee: "0x022B8D7378982E11AF76Ad351C58D71501c15A60",
+    issuedAt: Date.now() - 86400000 * 4,
+    expiry: Date.now() + 86400000 * 26,
+    active: true,
+    priceEth: "0.03",
+    transactionHash: "0x28f7a8c4f90123ee718a38bca8892bfb1a37c4e51928dfa3014c2789ba3881bc",
+    licenseType: "30_day_license",
+  },
+  {
+    licenseId: 2,
+    modelId: 1,
+    modelName: "AgriYield-XGBoost",
+    creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
+    licensee: "0x022B8D7378982E11AF76Ad351C58D71501c15A60",
+    issuedAt: Date.now() - 86400000 * 3,
+    expiry: Date.now() + 86400000 * 27,
+    active: true,
+    priceEth: "0.05",
+    transactionHash: "0x1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+    licenseType: "30_day_license",
+  },
+  {
+    licenseId: 3,
+    modelId: 3,
+    modelName: "ResumeClassifier",
+    creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
+    licensee: "0x022b8d7378982e11af76ad351c58d71501c15a60",
+    issuedAt: Date.now() - 86400000 * 2,
+    expiry: Date.now() + 86400000 * 28,
+    active: true,
+    priceEth: "0.04",
+    transactionHash: "0xd8d1e12bbceab1c77234479c8ab6cbb1e841c0fedfb4e938b305b151d785fa91",
+    licenseType: "30_day_license",
+  },
+  {
+    licenseId: 4,
+    modelId: 4,
+    modelName: "Fraud Sentinal",
+    creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
+    licensee: "0x022b8d7378982e11af76ad351c58d71501c15a60",
+    issuedAt: Date.now() - 86400000 * 1,
+    expiry: Date.now() + 86400000 * 29,
+    active: true,
+    priceEth: "0.01",
+    transactionHash: "0x6684f932650684c2a34bcc8be514dae13e900a8e09586b4e649ecb519de09c01",
+    licenseType: "30_day_license",
+  },
+  {
+    licenseId: 5,
+    modelId: 3,
+    modelName: "ResumeClassifier",
+    creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
+    licensee: "0x022b8d7378982e11af76ad351c58d71501c15a60",
+    issuedAt: Date.now() - 86400000 * 1,
+    expiry: Date.now() + 100 * 365 * 86400000,
+    active: true,
+    priceEth: "0.1200",
+    transactionHash: "0x97e2c9ff463d0c8212cd7f997476eabd3460071a0063cadd7b1a45a08ab074be",
+    licenseType: "full_ownership",
+  },
+  {
+    licenseId: 6,
+    modelId: 4,
+    modelName: "Fraud Sentinal",
+    creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
+    licensee: "0x022b8d7378982e11af76ad351c58d71501c15a60",
+    issuedAt: Date.now() - 86400000 * 1,
+    expiry: Date.now() + 100 * 365 * 86400000,
+    active: true,
+    priceEth: "0.0300",
+    transactionHash: "0x9e4f4b7fd29b70a49b4a3e7758cf4179c4fa92d8d557745d28dbd807017ec560",
+    licenseType: "full_ownership",
+  },
+  {
+    licenseId: 8,
+    modelId: 5,
+    modelName: "Diabetes Outcome Demo Classifier",
+    creator: "0xC0b45928A9fA709A11dd86b972D5b72CD6cd3F8c",
+    licensee: "0x022b8d7378982e11af76ad351c58d71501c15a60",
+    issuedAt: Date.now() - 86400000 * 1,
+    expiry: Date.now() + 86400000 * 30,
+    active: true,
+    priceEth: "0.005",
+    transactionHash: "0x38964d9dab8376bddbc7fb4be7af91c25c6ef3969d207e88b5962561278fe4e6",
+    licenseType: "30_day_license",
+  },
+  {
+    licenseId: 9,
+    modelId: 5,
+    modelName: "Diabetes Outcome Demo Classifier",
+    creator: "0xC0b45928A9fA709A11dd86b972D5b72CD6cd3F8c",
+    licensee: "0x022b8d7378982e11af76ad351c58d71501c15a60",
+    issuedAt: Date.now(),
+    expiry: Date.now() + 100 * 365 * 86400000,
+    active: true,
+    priceEth: "0.0150",
+    transactionHash: "0x408c4bd368a11347fda50c68bfabd63cf7437f5b7c80d0d5f5baf38841360cae",
+    licenseType: "full_ownership",
   },
 ];
 
@@ -172,9 +326,83 @@ const INITIAL_ACTIVITIES: ActivityEvent[] = [
   },
 ];
 
+const MODELS_STORAGE_KEY = "modelproof_models_cache_v3";
+const LICENSES_STORAGE_KEY = "modelproof_licenses_cache_v3";
+const ACTIVITIES_STORAGE_KEY = "modelproof_activities_cache_v3";
+
+function getStoredModels(): ModelRecord[] {
+  if (typeof window === "undefined") return INITIAL_DEMO_MODELS;
+  try {
+    const raw = localStorage.getItem(MODELS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not parse cached models from localStorage:", e);
+  }
+  return INITIAL_DEMO_MODELS;
+}
+
+function getStoredLicenses(): LicenseRecord[] {
+  if (typeof window === "undefined") return INITIAL_LICENSES;
+  try {
+    const raw = localStorage.getItem(LICENSES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not parse cached licenses from localStorage:", e);
+  }
+  return INITIAL_LICENSES;
+}
+
+function getStoredActivities(): ActivityEvent[] {
+  if (typeof window === "undefined") return INITIAL_ACTIVITIES;
+  try {
+    const raw = localStorage.getItem(ACTIVITIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not parse cached activities from localStorage:", e);
+  }
+  return INITIAL_ACTIVITIES;
+}
+
 export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { address, chainId, configuredAccounts, refreshBalances } = useWallet();
-  const [models, setModels] = useState<ModelRecord[]>(INITIAL_DEMO_MODELS);
+  const [models, setModels] = useState<ModelRecord[]>(getStoredModels);
+  const [licenses, setLicenses] = useState<LicenseRecord[]>(getStoredLicenses);
+  const [activities, setActivities] = useState<ActivityEvent[]>(getStoredActivities);
+  const [isSystemPaused, setIsSystemPaused] = useState<boolean>(false);
+
+  // Sync state to localStorage whenever modified so page refreshes never lose data
+  useEffect(() => {
+    try {
+      if (models.length > 0) {
+        localStorage.setItem(MODELS_STORAGE_KEY, JSON.stringify(models));
+      }
+    } catch {}
+  }, [models]);
+
+  useEffect(() => {
+    try {
+      if (licenses.length > 0) {
+        localStorage.setItem(LICENSES_STORAGE_KEY, JSON.stringify(licenses));
+      }
+    } catch {}
+  }, [licenses]);
+
+  useEffect(() => {
+    try {
+      if (activities.length > 0) {
+        localStorage.setItem(ACTIVITIES_STORAGE_KEY, JSON.stringify(activities));
+      }
+    } catch {}
+  }, [activities]);
 
   // Sync demo models creator with user's configured creator address if available
   useEffect(() => {
@@ -184,22 +412,6 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       );
     }
   }, [configuredAccounts?.creator]);
-  const [licenses, setLicenses] = useState<LicenseRecord[]>([
-    {
-      licenseId: 1,
-      modelId: 2,
-      modelName: "CropClassification-RandomForest",
-      creator: "0x24522a62C4aa130225D415Ee2b222fd473E90B83",
-      licensee: "0x022B8D7378982E11AF76Ad351C58D71501c15A60",
-      issuedAt: Date.now() - 86400000 * 4,
-      expiry: Date.now() + 86400000 * 26,
-      active: true,
-      priceEth: "0.03",
-      transactionHash: "0x28f7a8c4f90123ee718a38bca8892bfb1a37c4e51928dfa3014c2789ba3881bc",
-    },
-  ]);
-  const [activities, setActivities] = useState<ActivityEvent[]>(INITIAL_ACTIVITIES);
-  const [isSystemPaused, setIsSystemPaused] = useState<boolean>(false);
 
   const checkIsSystemPaused = async (): Promise<boolean> => {
     try {
@@ -215,7 +427,7 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Load persistent records from FastAPI SQLite backend on mount & periodically sync pause state
+  // Load persistent records from FastAPI SQLite backend on mount and merge with local cached items
   useEffect(() => {
     let isMounted = true;
     async function loadDatabaseData() {
@@ -227,13 +439,37 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ]);
         if (isMounted) {
           if (dbModels && dbModels.length > 0) {
-            setModels(dbModels);
+            setModels((prev) => {
+              const merged = [...dbModels];
+              for (const p of prev) {
+                if (!merged.some((m) => m.modelId === p.modelId || (m.name === p.name && m.modelHash === p.modelHash))) {
+                  merged.push(p);
+                }
+              }
+              return merged;
+            });
           }
           if (dbLicenses && dbLicenses.length > 0) {
-            setLicenses(dbLicenses);
+            setLicenses((prev) => {
+              const merged = [...dbLicenses];
+              for (const p of prev) {
+                if (!merged.some((l) => l.licenseId === p.licenseId || (l.transactionHash && l.transactionHash === p.transactionHash))) {
+                  merged.push(p);
+                }
+              }
+              return merged;
+            });
           }
           if (dbActivities && dbActivities.length > 0) {
-            setActivities(dbActivities);
+            setActivities((prev) => {
+              const merged = [...dbActivities];
+              for (const a of prev) {
+                if (!merged.some((existing) => existing.id === a.id || existing.txHash === a.txHash)) {
+                  merged.push(a);
+                }
+              }
+              return merged;
+            });
           }
           await checkIsSystemPaused();
         }
